@@ -1,0 +1,6 @@
+[submodule "engines/porcupine"]
+	path = engines/porcupine
+	url = git@github.com:Picovoice/Porcupine.git
+[submodule "engines/snowboy"]
+	path = engines/snowboy
+	url = git@github.com:Kitt-AI/snowboy.git
