@@ -128,8 +128,8 @@ we keep a copy of dataset used internally. (please send an email to <help@picovo
 
 The engines used in the benchmark are:
 * PocketSphinx 0.1.3 from [PyPI](https://pypi.org/project/pocketsphinx/).
-* Snowboy is cloned from its repository on [commit](https://github.com/Kitt-AI/snowboy/commit/52723960c5c98969085dd91de69c48287c1f8c1a).
-* Porcupine is cloned from its repository on [commit](https://github.com/Picovoice/Porcupine/commit/e54c73322cb258017b4a44a19eb762b8f81ccf2f).
+* Snowboy is cloned from its repository on [commit](https://github.com/Kitt-AI/snowboy/commit/d51c2e25c3bc3a44e06e1b16c6fdd44d9625f13c).
+* Porcupine is cloned from its repository on [commit](https://github.com/Picovoice/Porcupine/commit/9b44c22e301e11556a4087d3655d7f1e7b8f8061).
 
 ### How can I use the framework for my wake-word?
 
