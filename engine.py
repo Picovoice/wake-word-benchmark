@@ -215,6 +215,8 @@ class SnowboyEngine(Engine):
         self._snowboy = snowboydetect.SnowboyDetect(resource_filename=resource_filename,
                                                     model_str=model_str)
         self._snowboy.SetSensitivity(str(sensitivity).encode())
+        self._snowboy.ApplyFrontend(True)
+
 
     @prepare_pcm
     def process(self, pcm):
