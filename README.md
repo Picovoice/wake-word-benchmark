@@ -3,8 +3,8 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Picovoice/wakeword-benchmark/blob/master/LICENSE)
 
 The primary purpose of this benchmark framework is to provide a scientific comparison between different wake-word
-detection engines. Currently, the framework is configured for **Alexa** as the test wake-word. But it can be
-configured for any other wake-words as described [here](#how-can-i-reproduce-the-results).
+detection engines in terms of accuracy and runtime metrics (real time factor and memory usage). Currently, the framework
+is configured for **Alexa** as the test wake-word. But it can be configured for any other wake-words as described [here](#how-can-i-reproduce-the-results).
 
 # Why did we make this?
 
@@ -20,7 +20,7 @@ data-driven decisions. The framework
 - runs wake-word engines at different detection thresholds (aka sensitivities) which results in different
 miss detection and false alarm rates. Finally, it creates an
 [ROC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) curve for each engine.
-
+- measures [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485) and memory usage for each engine on Raspberry Pi 3.
 # Data
 
 [Common Voice](https://voice.mozilla.org/en) is used as background dataset, i.e., dataset without utterances of the
@@ -43,10 +43,14 @@ and [Snowboy](https://github.com/Kitt-AI/snowboy) which are included as submodul
 
 # Metric
 
-We measure the performance of the wake-word engines using false alarm per hour and miss detection rates. The false alarm
+We measure the accuracy of the wake-word engines using false alarm per hour and miss detection rates. The false alarm
 per hour is measured as a number of false positives in an hour. Miss detection is measured as the percentage of wake-word
  utterances an engine rejects incorrectly. Using these definitions we compare the engines for a given false alarm, and therefore the
 engine with a smaller miss detection rate has a better performance.
+
+Two runtime metrics are measured, real time factor and memory. Real time factor is the ratio of duration of input audio data
+to processing time. It can be thought of as inverse CPU usage. Engine with higher real time factor is more computationally
+efficient (faster).
 
 # Usage
 
@@ -74,7 +78,13 @@ sudo apt-get install libsox-fmt-mp3
 Python bindings are used for running Porcupine and Snowboy. The repositories for these are cloned in [engines](/engines).
 Make sure to follow the instructions on their repositories to be able to run their Python demo before proceeding to the next step.
 
-### Running the benchmark
+For memory profiling [valgrind](http://valgrind.org/) is used. It can be installed using
+
+```bash
+sudo apt-get install valgrind
+```
+
+### Running the accuracy benchmark
 
 Usage information can be retrieved via
 
@@ -97,7 +107,13 @@ To run the benchmark in the noisy environment pass the `--add_noise` and it rand
 from DEMAND dataset and adds it to the audio samples. We are adding noise to the audio samples with the SNR of 10dB which
 simulates environments with moderate noise.
 
+### Running the runtime benchmark
+
+Please refer to runtime [documentation](/runtime/README.md).
+
 # Results
+
+## Accuracy
 
 Below is the result (ROC curve) of running the benchmark framework for clean and noisy environments. As expected, for a
 given false alarm rate the miss rate increases across different engines when noise is added to data.
@@ -112,6 +128,18 @@ engine with smallest miss rate is performing the best. This is shown below for c
 Also below is the result in presence of noise
 
 ![](doc/img/benchmark_noisy_bar.png)
+
+## Runtime
+
+Below are the runtime measurements (on Raspberry Pi 3)
+
+Engine | Real Time Factor | Memory
+--- | --- | ---
+PocketSphinx | 3.15 | 15.58 MB
+Snowboy | 3.21 | 2.48 MB
+Porcupine (Standard) | 13.53 | 1.38 MB
+Porcupine (Small) | 20.32 | 0.41 MB
+Porcupine (Tiny) | 29.28 | 0.24  MB
 
 # FAQ
 
