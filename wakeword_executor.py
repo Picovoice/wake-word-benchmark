@@ -16,74 +16,82 @@
 
 import logging
 
-from dataset import AudioReader
-from engine import Engine
-from noise_mixer import NoiseMixer
+from dataset import *
+from engine import *
+from noise_mixer import *
 
 
 class WakeWordExecutor(object):
-    def __init__(self, engine_type, sensitivity, keyword, dataset, noise_dataset=None):
-        """Executor for running different wake-word engines under different environments.
+    """Executor for running (noisy) speech datasets through wake-word engines and collect their accuracy metrics."""
+
+    def __init__(self, engine_type, sensitivity, keyword, speech_dataset, noise_dataset=None):
+        """
+        Constructor.
 
         :param engine_type: type of the wake-word engine.
-        :param sensitivity: sensitivity to use in the wake-word engine.
-        :param keyword: keyword to use in the wake word engine.
-        :param dataset: dataset containing both background and keyword datasets.
-        :param noise_dataset: dataset used as a source for mixing noise into clean data.
+        :param sensitivity: wake-word engine's detection sensitivity.
+        :param keyword: keyword to be detected.
+        :param speech_dataset: speech dataset containing both background and keyword utterances.
+        :param noise_dataset: dataset containing noise samples.
         """
-        self._keyword = keyword
-        self._sensitivity = sensitivity
-        self._dataset = dataset
-        # Initialize the engine.
-        self._engine = Engine.create(engine_type, keyword, sensitivity)
 
-        self._audio_reader = AudioReader(self._engine.sample_rate, self._engine.channels, self._engine.bits_per_sample)
-        self._noise_mixer = None
-        if noise_dataset:
-            self._noise_mixer = NoiseMixer(noise_dataset, self._audio_reader, self._engine.frame_length)
+        self._sensitivity = sensitivity
+        self._speech_dataset = speech_dataset
+        self._num_keywords =\
+            sum([speech_dataset.get_metadata(i).contains_keyword for i in range(speech_dataset.size())])
+
+        if noise_dataset is not None:
+            self._noise_mixer = NoiseMixer(noise_dataset)
+        else:
+            self._noise_mixer = None
+
+        self._engine = Engine.create(engine_type, keyword=keyword, sensitivity=sensitivity)
 
     def execute(self):
-        """Run the engine on the dataset.
+        """
+        Runs the engine on the (noisy) speech dataset.
 
         :return: tuple of false alarm per hour and miss detection rate.
         """
-        logging.info('Running %s with sensitivity %s', self._engine.engine_type.value, self._sensitivity)
-        fa = 0
-        md = 0
-        # Duration of the dataset in seconds.
+
+        num_false_alarms = 0
+        num_misses = 0
         total_duration_sec = 0
-        for data in self._dataset:
-            pcm, duration_sec = self._audio_reader.read(data)
-            total_duration_sec += duration_sec
+
+        for index in range(self._speech_dataset.size()):
+            data = self._speech_dataset.get_data(index)
+
+            pcm = data.pcm
+            total_duration_sec += pcm.size / Dataset.SAMPLE_RATE
+
             if self._noise_mixer:
                 pcm = self._noise_mixer.mix(pcm)
-            num_frames = len(pcm) // self._engine.frame_length
+
+            frame_length = self._engine.frame_length
+            num_frames = len(pcm) // frame_length
             num_detected = 0
             for i in range(num_frames):
-                frame = pcm[i * self._engine.frame_length:(i + 1) * self._engine.frame_length]
+                frame = pcm[i * frame_length:(i + 1) * frame_length]
                 if self._engine.process(frame):
                     num_detected += 1
 
-            if data.is_keyword:
+            if data.metadata.contains_keyword:
                 if num_detected == 0:
-                    md += 1
+                    num_misses += 1
             else:
-                fa += num_detected
+                num_false_alarms += num_detected
 
-        false_alarm_per_hour = fa * 3600 / total_duration_sec
-        keyword_dataset_size = sum(1 for d in self._dataset if d.is_keyword)
-        miss_rate = md / keyword_dataset_size
-        logging.info('[%s][%s] proceeded %s hours', self._engine.engine_type.value, self._sensitivity,
-                     (total_duration_sec / 3600))
-        logging.info('[%s][%s] %s keyword files', self._engine.engine_type.value, self._sensitivity,
-                     keyword_dataset_size)
-        logging.info('[%s][%s] %s false alarms', self._engine.engine_type.value, self._sensitivity, fa)
-        logging.info('[%s][%s] %s miss detections', self._engine.engine_type.value, self._sensitivity, md)
-        logging.info('[%s][%s] %s false alarms per hour', self._engine.engine_type.value, self._sensitivity,
-                     false_alarm_per_hour)
-        logging.info('[%s][%s] miss detection rate %s', self._engine.engine_type.value, self._sensitivity, miss_rate)
+        total_duration_hour = total_duration_sec / 3600
+        false_alarm_per_hour = num_false_alarms / total_duration_hour
+        miss_rate = num_misses / self._num_keywords
+
+        logging.info('%s (%s):', str(self._engine), self._sensitivity)
+        logging.info('false alarms per hour: %f (%d / %f)', false_alarm_per_hour, num_false_alarms, total_duration_hour)
+        logging.info('miss detection rate: %f (%d / %d)', miss_rate, num_misses, self._num_keywords)
+
         return false_alarm_per_hour, miss_rate
 
     def release(self):
-        """Release the resources hold by the engine."""
+        """Releases the resources acquired by the engine."""
+
         self._engine.release()

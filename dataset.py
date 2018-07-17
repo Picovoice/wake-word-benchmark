@@ -15,253 +15,224 @@
 #
 
 import csv
-import logging
 import os
-import tempfile
-from abc import abstractmethod
+from collections import namedtuple
 from enum import Enum
 
 import numpy as np
-from soundfile import SoundFile
-from sox import Transformer
-from sox import file_info
+import soundfile
+import sox
 
 
-class DatasetInstance(Enum):
-    """Supported datasets."""
-    CommonVoiceDataset = 'Common Voice Dataset'
-    AlexaDataset = 'Alexa Dataset'
-    DemandDataset = 'Demand Dataset'
+class Datasets(Enum):
+    """Different datasets."""
+
+    COMMON_VOICE = 'Mozilla Common Voice'
+    ALEXA = 'Alexa'
+    DEMAND = 'DEMAND'
 
 
-class AudioMetadata(object):
-    """Audio metadata data."""
-    def __init__(self, path, is_keyword):
-        """Initializer.
+AudioMetadata = namedtuple('AudioMetadata', ['path', 'contains_keyword'])
 
-        :param path: absolute path to the audio file.
-        :param is_keyword: boolean flag that shows if this audio file belongs to the keyword dataset.
-        """
-        self.path = path
-        self.is_keyword = is_keyword
-
-
-class AudioReader(object):
-    """Audio reader."""
-    def __init__(self, sample_rate, channels, bits_per_sample):
-        """Initializer.
-
-        :param sample_rate: sample rate of the audio file.
-        :param channels: number of channels in the audio file.
-        :param bits_per_sample: bit per sample in the audio file.
-        """
-        self._sample_rate = sample_rate
-        self._channels = channels
-        self._bits_per_sample = bits_per_sample
-
-    def read(self, audio_metadata):
-        """Read an audio file.
-
-        :param audio_metadata: metadata info of an audio
-        :return: raw audio data as float32 array and duration in seconds.
-        """
-        fd = temp_path = None
-        # Convert it to a wav file.
-        if not audio_metadata.path.endswith('.wav'):
-            original_sample_rate = file_info.sample_rate(audio_metadata.path)
-            assert self._sample_rate <= original_sample_rate
-            transformer = Transformer()
-            transformer.convert(samplerate=self._sample_rate, n_channels=self._channels, bitdepth=self._bits_per_sample)
-            fd, temp_path = tempfile.mkstemp(suffix='.wav')
-            transformer.build(audio_metadata.path, temp_path)
-
-        if temp_path:
-            path = temp_path
-        else:
-            path = audio_metadata.path
-
-        # Read the audio file.
-        with SoundFile(path) as soundfile:
-            # make sure the audio properties are as expected.
-            assert soundfile.samplerate == self._sample_rate
-            assert soundfile.channels == self._channels
-            duration_sec = len(soundfile) / self._sample_rate
-            pcm = soundfile.read(dtype='float32')
-
-            # Add 0.5 second silence to the end of files containing keyword as in occasionally the user stopped
-            # recording right after uttering the keyword. If the detector needs some time after seeing the keyword to
-            # make a decision (e.g. endpointing) this is going to artificially increase the miss rates.
-            if audio_metadata.is_keyword:
-                pcm = np.append(pcm, np.zeros(self._sample_rate // 2))
-
-            if temp_path:
-                os.close(fd)
-                os.remove(temp_path)
-
-            return pcm, duration_sec
+AudioData = namedtuple('AudioData', ['pcm', 'metadata'])
 
 
 class Dataset(object):
     """Base class for dataset."""
 
-    def __init__(self, root):
-        """Initializer.
+    """
+    Audio sample rate required by wake-word engines under test. All datasets need to provide data with this sample rate.
+    """
+    SAMPLE_RATE = 16000
 
-        :param root: root directory of the dataset.
+    def size(self):
+        """Number of examples within dataset."""
+
+        return len(self._get_metadatas())
+
+    def get_metadata(self, index):
         """
-        self._root = root
-        if not os.path.exists(root) or not os.path.isdir(root):
-            raise ValueError('Check your root directory %s', root)
+        Getter for audio metadata.
+
+        :param index: index of metadata.
+        :return: metadata.
+        """
+
+        return self._get_metadatas()[index]
+
+    def get_data(self, index):
+        """
+        Getter for audio data.
+
+        :param index: index of data.
+        :return: data.
+        """
+
+        metadata = self.get_metadata(index)
+
+        # All engines consume 16-bit encoded audio
+        pcm, sample_rate = soundfile.read(metadata.path, dtype='int16')
+        assert sample_rate == self.SAMPLE_RATE
+        assert pcm.ndim == 1
+
+        # Add 0.5 second silence to the end of files containing keyword as occasionally the user stopped recording right
+        # after uttering the keyword. If the detector needs some time after seeing the keyword to make a decision
+        # (e.g. end-pointing) this is going to artificially increase the miss rates.
+        if metadata.contains_keyword:
+            pcm = np.append(pcm, np.zeros(self.SAMPLE_RATE // 2, dtype=np.int16))
+
+        return AudioData(pcm=pcm, metadata=metadata)
 
     @classmethod
     def create(cls, dataset_type, root, **kwargs):
-        """Factory method to create a dataset.
+        """
+        Factory method.
 
-        :param dataset_type: type of the dataset.
-        :param root: root directory of the dataset.
-        :param kwargs: optional arguments passed to the constructor of the dataset.
+        :param dataset_type: type of dataset.
+        :param root: path to root of dataset.
+        :param kwargs: keyword arguments.
         :return: dataset instance.
         """
-        if dataset_type is DatasetInstance.AlexaDataset:
-            return AlexaDataset(root)
-        if dataset_type is DatasetInstance.CommonVoiceDataset:
-            return CommonVoiceDataset(root, **kwargs)
-        if dataset_type is DatasetInstance.DemandDataset:
-            return DemandDataset(root)
-        raise ValueError('%s is not supported', dataset_type.value)
 
-    @abstractmethod
-    def metadata(self):
-        """Get the metadata in the dataset."""
-        pass
+        if dataset_type is Datasets.COMMON_VOICE:
+            return CommonVoiceDataset(root, **kwargs)
+        if dataset_type is Datasets.ALEXA:
+            return AlexaDataset(root)
+        if dataset_type is Datasets.DEMAND:
+            return DemandDataset(root)
+
+        raise ValueError('Cannot create dataset of type %s', dataset_type.value)
+
+    def _get_metadatas(self):
+        """Getter for all metadata information within dataset."""
+
+        raise NotImplementedError()
+
+
+class CompositeDataset(Dataset):
+    """Wrapper dataset for a collection of datasets."""
+
+    def __init__(self, datasets, shuffle=True, seed=666):
+        """
+        Constructor.
+
+        :param datasets: collection of datasets.
+        :param shuffle: flag to indicate if the datasets examples are to be shuffled.
+        :param seed: seed for random number generator used for shuffling.
+        """
+
+        self._metadatas = []
+        for dataset in datasets:
+            for i in range(dataset.size()):
+                self._metadatas.append(dataset.get_metadata(i))
+
+        if shuffle:
+            random = np.random.RandomState(seed=seed)
+            random.shuffle(self._metadatas)
+
+    def _get_metadatas(self):
+        return self._metadatas
 
 
 class CommonVoiceDataset(Dataset):
-    """Mozilla Common Voice Dataset.
+    """Mozilla Common Voice Dataset (https://voice.mozilla.org)."""
 
-    https://voice.mozilla.org
-    """
-    def __init__(self,
-                 root,
-                 exclude_words=None):
-        """Initialize.
-
-        :param root: root directory of Common Voice Dataset.
-        :param exclude_words: exclude the files that contain any of the these words.
+    def __init__(self, root, exclude_words=list()):
         """
-        super().__init__(root)
+        Constructor. It converts MP3 files within original dataset into FLAC and caches them.
+
+        :param root: root of dataset.
+        :param exclude_words: files containing these words in their transcript are excluded.
+        """
+
         if isinstance(exclude_words, str):
             exclude_words = [exclude_words]
 
-        self._exclude_words = exclude_words
-        # Only read the data from validated directories
-        self._include_dirs = ['cv-valid-train', 'cv-valid-test']
+        self._metadatas = self._load_metadatas(root, exclude_words)
 
-    def metadata(self):
-        """Get the metadata.
+    def _get_metadatas(self):
+        return self._metadatas
 
-        :return: list of metadata info for audio files in the dataset.
-        """
-        logging.info('Exploring Common Voice Dataset...')
-        res = []
-        for directory, _, filenames in os.walk(self._root):
-            filenames = [f for f in filenames if f.endswith('.mp3')]
-            dirname = os.path.basename(directory)
-            if not filenames or dirname == 'cv-invalid' or dirname not in self._include_dirs:
-                continue
+    @staticmethod
+    def _load_metadatas(root, exclude_words):
+        metadatas = []
 
-            dir_metadata = self._get_directory_metadata(dirname)
-            for filename in filenames:
-                md = dir_metadata.get(filename)
-                # Only take the files that have no down votes and have more than one up votes.
-                if (md['up_votes'] < 2 or md['down_votes'] > 0 or not md['text'] or
-                        any(x in md['text'] for x in self._exclude_words)):
-                    continue
+        for part in ['cv-valid-train', 'cv-valid-test', 'cv-valid-dev']:
+            metadata_file = os.path.join(root, '%s.csv' % part)
 
-                path = os.path.join(directory, filename)
-                res.append(AudioMetadata(path, False))
+            with open(metadata_file) as f:
+                reader = csv.DictReader(f)
 
-        logging.info('Found %s valid audio files in Common Voice Dataset', len(res))
-        return res
+                for row in reader:
+                    text = row['text'].lower()
+                    up_votes = int(row['up_votes'])
+                    down_votes = int(row['down_votes'])
 
-    def _get_directory_metadata(self, dirname):
-        """Get a metadata info for audio files in a directory.
+                    if up_votes < 2 or down_votes > 0 or not text or any(x.lower() in text for x in exclude_words):
+                        continue
 
-        The metadata is a dict from the name of a file to their metadata information. For example, it could be something
-        like: {'sample.mp3': {'text': 'GitHub is awesome', 'up_votes': 2, 'down_votes': 0}}
+                    mp3_path = os.path.join(root, row['filename'])
+                    assert mp3_path.endswith('.mp3')
 
-        :param dirname: data directory name.
-        :return: dict of file names to their metadata info.
-        """
-        # The metadata files are in the root folder.
-        metadata = {}
-        metadata_file = os.path.join(self._root, '%s.csv' % dirname)
+                    flac_path = mp3_path.replace('.mp3', '.flac')
+                    if not os.path.exists(flac_path):
+                        transformer = sox.Transformer()
+                        transformer.convert(samplerate=Dataset.SAMPLE_RATE, bitdepth=16, n_channels=1)
+                        transformer.build(mp3_path, flac_path)
 
-        with open(metadata_file) as csv_file:
-            reader = csv.DictReader(csv_file)
-            for row in reader:
-                # file names are presented as <dirname/filename> in the csv file.
-                filename = row['filename'].split('/', maxsplit=1)[1]
-                text = row['text'].lower()
-                up_votes = int(row['up_votes'])
-                down_votes = int(row['down_votes'])
-                metadata[filename] = {'text': text, 'up_votes': up_votes, 'down_votes': down_votes}
+                    metadatas.append(AudioMetadata(path=flac_path, contains_keyword=False))
 
-        return metadata
+        return metadatas
 
 
 class AlexaDataset(Dataset):
-    """Alexa dataset collected by Picovoice.
+    """Crowd-sourced utterances of Alexa."""
 
-    """
     def __init__(self, root):
-        """Initializer.
-
-        :param root: root directory of the dataset.
         """
-        super().__init__(root)
+        Constructor.
 
-    def metadata(self):
-        """Get the metadata.
-
-        :return: list of metadata info for audio files in the dataset.
+        :param root: root of dataset.
         """
-        res = []
-        logging.info('Exploring Alexa Dataset...')
-        for directory, _, filenames in os.walk(self._root):
-            filenames = [f for f in filenames if f.endswith('.wav')]
-            for f in filenames:
-                path = os.path.join(directory, f)
-                res.append(AudioMetadata(path, True))
 
-        logging.info('Found %s audio files in Alexa Dataset', len(res))
-        return res
+        self._metadatas = self._load_metadata(root)
+
+    def _get_metadatas(self):
+        return self._metadatas
+
+    @staticmethod
+    def _load_metadata(root):
+        metadatas = []
+        for directory, _, filenames in os.walk(root):
+            for filename in filenames:
+                if filename.endswith('.wav'):
+                    metadatas.append(AudioMetadata(path=os.path.join(directory, filename), contains_keyword=True))
+
+        return metadatas
 
 
 class DemandDataset(Dataset):
-    """Demand dataset.
+    """DEMAND noise dataset (http://parole.loria.fr/DEMAND)"""
 
-    http://parole.loria.fr/DEMAND/
-    """
     def __init__(self, root):
-        """Initializer.
-
-        :param root: root directory of the dataset.
         """
-        super().__init__(root)
+        Constructor.
 
-    def metadata(self):
-        """Get the metadata.
-
-        :return: list of metadata info for audio files in the dataset.
+        :param root: root of dataset.
         """
-        res = []
-        logging.info('Exploring Demand Dataset...')
-        for directory, _, filenames in os.walk(self._root):
-            filenames = [f for f in filenames if f == 'ch01.wav']
-            for f in filenames:
-                path = os.path.join(directory, f)
-                res.append(AudioMetadata(path, False))
 
-        logging.info('Found %s audio files in Demand Dataset', len(res))
-        return res
+        self._metadatas = self._load_metadatas(root)
+
+    def _get_metadatas(self):
+        return self._metadatas
+
+    @staticmethod
+    def _load_metadatas(root):
+        metadatas = []
+
+        for directory, _, filenames in os.walk(root):
+            for filename in filenames:
+                if filename == 'ch01.wav':
+                    metadatas.append(AudioMetadata(path=os.path.join(directory, filename), contains_keyword=False))
+
+        return metadatas
