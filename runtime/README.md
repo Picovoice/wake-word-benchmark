@@ -14,7 +14,6 @@ measuring the processing time of its commandline interface. This is essentially 
 of PocketSphinx.
 
 All the measurements are done on **Raspberry Pi 3**. The wake-word for testing is 'Alexa' same as the accuracy benchmark.
-Finally, for Snowboy we enable frontend processing as suggested in its GitHub page.
 
 ## Real Time Factor
 

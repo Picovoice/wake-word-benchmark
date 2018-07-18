@@ -136,7 +136,7 @@ Below are the runtime measurements (on Raspberry Pi 3)
 Engine | Real Time Factor | Memory
 --- | --- | ---
 PocketSphinx | 3.15 | 15.58 MB
-Snowboy | 3.21 | 2.48 MB
+Snowboy | 5.28 | 2.43 MB
 Porcupine (Standard) | 13.53 | 1.38 MB
 Porcupine (Small) | 20.32 | 0.41 MB
 Porcupine (Tiny) | 29.28 | 0.24  MB
