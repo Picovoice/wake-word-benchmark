@@ -271,9 +271,6 @@ class SnowboyEngine(Engine):
         resource_filename = os.path.join(os.path.dirname(__file__), 'engines/snowboy/resources/common.res').encode()
         self._snowboy = snowboydetect.SnowboyDetect(resource_filename=resource_filename, model_str=model_str)
         self._snowboy.SetSensitivity(str(sensitivity).encode())
-        # Enable frontend processing as suggested for alexa in documentation of Snowboy
-        # (https://github.com/Kitt-AI/snowboy)
-        self._snowboy.ApplyFrontend(True)
 
     def process(self, pcm):
         pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16).tobytes()
