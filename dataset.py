@@ -71,7 +71,7 @@ class Dataset(object):
         metadata = self.get_metadata(index)
 
         # All engines consume 16-bit encoded audio
-        pcm, sample_rate = soundfile.read(metadata.path, dtype='int16')
+        pcm, sample_rate = soundfile.read(metadata.path, dtype='float64')
         assert sample_rate == self.SAMPLE_RATE
         assert pcm.ndim == 1
 
@@ -79,7 +79,7 @@ class Dataset(object):
         # after uttering the keyword. If the detector needs some time after seeing the keyword to make a decision
         # (e.g. end-pointing) this is going to artificially increase the miss rates.
         if metadata.contains_keyword:
-            pcm = np.append(pcm, np.zeros(self.SAMPLE_RATE // 2, dtype=np.int16))
+            pcm = np.append(pcm, np.zeros(self.SAMPLE_RATE // 2))
 
         return AudioData(pcm=pcm, metadata=metadata)
 

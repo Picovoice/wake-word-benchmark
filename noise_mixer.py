@@ -31,7 +31,7 @@ class NoiseMixer(object):
 
         self._noise_dataset = noise_dataset
         self._window_length = window_length
-        self._snr_dB = snr_db
+        self._snr_db = snr_db
 
         self._random = np.random.RandomState(seed=666)
 
@@ -47,7 +47,7 @@ class NoiseMixer(object):
         noise_scale = self._noise_scale(pcm, noise_sample)
         res = pcm + noise_sample * noise_scale
         # Make sure that we are not clipping.
-        res = (np.iinfo(np.int16).max * res / (np.abs(res).max() * 2)).astype(np.int16)
+        res /= np.abs(res).max() * 2
 
         return res
 
@@ -68,7 +68,7 @@ class NoiseMixer(object):
         assert pcm.shape[0] == noise.shape[0]
 
         # HINT: snr = 10 * log10( pcm_energy / (noise_energy * (noise_scale ** 2)) )
-        noise_scale = np.sqrt(self._pcm_energy(pcm) / (self._noise_energy(noise) * (10 ** (self._snr_dB / 10.))))
+        noise_scale = np.sqrt(self._pcm_energy(pcm) / (self._noise_energy(noise) * (10 ** (self._snr_db / 10.))))
 
         return noise_scale
 

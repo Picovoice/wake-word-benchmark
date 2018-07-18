@@ -128,7 +128,8 @@ class PocketSphinxEngine(Engine):
         self._decoder.start_utt()
 
     def process(self, pcm):
-        self._decoder.process_raw(pcm.tobytes(), False, False)
+        pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16).tobytes()
+        self._decoder.process_raw(pcm, False, False)
 
         detected = self._decoder.hyp()
         if detected:
@@ -167,6 +168,7 @@ class PorcupineEngineBase(Engine):
             sensitivity=sensitivity)
 
     def process(self, pcm):
+        pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16)
         return self._porcupine.process(pcm)
 
     def release(self):
@@ -274,7 +276,8 @@ class SnowboyEngine(Engine):
         self._snowboy.ApplyFrontend(True)
 
     def process(self, pcm):
-        return self._snowboy.RunDetection(pcm.tobytes()) == 1
+        pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16).tobytes()
+        return self._snowboy.RunDetection(pcm) == 1
 
     def release(self):
         pass
