@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://github.com/Picovoice/wakeword-benchmark/blob/master/LICENSE)
 
 The primary purpose of this benchmark framework is to provide a scientific comparison between different wake-word
-detection engines in terms of accuracy and runtime metrics (real time factor and memory usage). Currently, the framework
+detection engines in terms of accuracy and runtime metrics. Currently, the framework
 is configured for **Alexa** as the test wake-word. But it can be configured for any other wake-words as described [here](#how-can-i-reproduce-the-results).
 
 # Why did we make this?
@@ -20,7 +20,7 @@ data-driven decisions. The framework
 - runs wake-word engines at different detection thresholds (aka sensitivities) which results in different
 miss detection and false alarm rates. Finally, it creates an
 [ROC](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) curve for each engine.
-- measures [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485) and memory usage for each engine on Raspberry Pi 3.
+- measures [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485), CPU usage, and memory usage for each engine on Raspberry Pi 3.
 # Data
 
 [Common Voice](https://voice.mozilla.org/en) is used as background dataset, i.e., dataset without utterances of the
@@ -48,8 +48,8 @@ per hour is measured as a number of false positives in an hour. Miss detection i
  utterances an engine rejects incorrectly. Using these definitions we compare the engines for a given false alarm, and therefore the
 engine with a smaller miss detection rate has a better performance.
 
-Two runtime metrics are measured, real time factor and memory. Real time factor is the ratio of duration of input audio data
-to processing time. It can be thought of as inverse CPU usage. Engine with higher real time factor is more computationally
+Two runtime metrics are measured, real time factor and memory usage. Real time factor is computed by dividing the length of input audio to
+to the processing time. It can be thought of as inverse CPU usage. The engine with a higher real time factor is more computationally
 efficient (faster).
 
 # Usage
@@ -103,8 +103,7 @@ This runs the benchmark for a clean environment and creates the ROC curves for d
 `--output_directory <output directory to save the results>` is passed to command line the framework 
 saves the results in CSV format. This is going to take a while (it takes 48 hours on a quad-core Intel machine).
 
-To run the benchmark in the noisy environment pass the `--add_noise` and it randomly picks a noise
-from DEMAND dataset and adds it to the audio samples. We are adding noise to the audio samples with the SNR of 10dB which
+To run the benchmark in the noisy environment pass the `--add_noise`. Noise is mixed into the audio samples with the SNR of 10dB which
 simulates environments with moderate noise.
 
 ### Running the runtime benchmark
@@ -131,15 +130,15 @@ Also below is the result in presence of noise
 
 ## Runtime
 
-Below are the runtime measurements (on Raspberry Pi 3)
+Below are the runtime measurements (on Raspberry Pi 3). Two metrics are measured (1) real time factor and (2) memory usage.
+Fir ease of interpretation we also added average CPU usage by simply inversing the real time factor.
 
-Engine | Real Time Factor | Memory
---- | --- | ---
-PocketSphinx | 3.15 | 15.58 MB
-Snowboy | 5.28 | 2.43 MB
-Porcupine (Standard) | 13.53 | 1.38 MB
-Porcupine (Small) | 20.32 | 0.41 MB
-Porcupine (Tiny) | 29.28 | 0.24  MB
+Engine | Real Time Factor | Average CPU Usage | Memory Usage
+:---: | :---: | :---: | :---:
+PocketSphinx | 3.15 | 31.75% | 15.58 MB
+Snowboy | 5.28 | 18.94% | 2.43 MB
+Porcupine | 13.53 | 7.39% | 1.38 MB
+Porcupine Tiny | 29.28 | 3.42% | 0.24  MB
 
 # FAQ
 
@@ -149,8 +148,7 @@ The results presented above are completely reproducible given that exactly same 
 
 Datasets are taken from
 * [Common Voice Dataset](https://voice.mozilla.org/en/data) is an active project and evolving over time. But this should
-not significantly affect the results. In case you are interested to use the exact version as used to produce above results, 
-we keep a copy of dataset used internally. (please send an email to <help@picovoice.ai>).
+not significantly affect the results.
 * [Alexa Dataset](https://www.kaggle.com/aanhari/alexa-dataset).
 * [Demand Dataset](https://www.kaggle.com/aanhari/demand-dataset).
 

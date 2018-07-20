@@ -31,7 +31,6 @@ class Engines(Enum):
 
     POCKET_SPHINX = 'Pocketsphinx'
     PORCUPINE = 'Porcupine'
-    PORCUPINE_SMALL = "PorcupineSmall"
     PORCUPINE_TINY = "PorcupineTiny"
     SNOWBOY = 'Snowboy'
 
@@ -69,8 +68,6 @@ class Engine(object):
 
         if engine_type is Engines.PORCUPINE:
             return np.linspace(0.0, 1.0, 10)
-        if engine_type is Engines.PORCUPINE_SMALL:
-            return np.linspace(0.0, 1.0, 10)
         if engine_type is Engines.PORCUPINE_TINY:
             return np.linspace(0.0, 1.0, 10)
         if engine_type is Engines.POCKET_SPHINX:
@@ -95,8 +92,6 @@ class Engine(object):
             return PocketSphinxEngine(keyword, sensitivity)
         if engine_type is Engines.PORCUPINE:
             return PorcupineEngine(keyword, sensitivity)
-        if engine_type is Engines.PORCUPINE_SMALL:
-            return PorcupineSmallEngine(keyword, sensitivity)
         if engine_type is Engines.PORCUPINE_TINY:
             return PorcupineTinyEngine(keyword, sensitivity)
         if engine_type is Engines.SNOWBOY:
@@ -174,6 +169,9 @@ class PorcupineEngineBase(Engine):
     def release(self):
         self._porcupine.delete()
 
+    def __str__(self):
+        raise NotImplementedError()
+
 
 class PorcupineEngine(PorcupineEngineBase):
     """Original variant of Porcupine."""
@@ -198,31 +196,6 @@ class PorcupineEngine(PorcupineEngineBase):
 
     def __str__(self):
         return 'Porcupine'
-
-
-class PorcupineSmallEngine(PorcupineEngineBase):
-    """Small variant of Porcupine engine."""
-
-    def __init__(self, keyword, sensitivity):
-        """
-        Constructor.
-
-        :param keyword: keyword to be detected.
-        :param sensitivity: detection sensitivity.
-        """
-
-        model_file_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/lib/common/porcupine_small_params.pv')
-
-        keyword_file_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/resources/keyword_files/%s_linux_small.ppn' % keyword.lower())
-
-        super().__init__(sensitivity, model_file_path, keyword_file_path)
-
-    def __str__(self):
-        return 'Porcupine Small'
 
 
 class PorcupineTinyEngine(PorcupineEngineBase):
