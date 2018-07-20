@@ -244,6 +244,8 @@ class SnowboyEngine(Engine):
         resource_filename = os.path.join(os.path.dirname(__file__), 'engines/snowboy/resources/common.res').encode()
         self._snowboy = snowboydetect.SnowboyDetect(resource_filename=resource_filename, model_str=model_str)
         self._snowboy.SetSensitivity(str(sensitivity).encode())
+        self._snowboy.ApplyFrontend(True)
+
 
     def process(self, pcm):
         pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16).tobytes()
