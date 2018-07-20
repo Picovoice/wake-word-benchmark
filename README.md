@@ -131,7 +131,7 @@ Also below is the result in presence of noise
 ## Runtime
 
 Below are the runtime measurements (on Raspberry Pi 3). Two metrics are measured (1) real time factor and (2) memory usage.
-Fir ease of interpretation we also added average CPU usage by simply inversing the real time factor.
+Fir ease of interpretation we also added average CPU usage by simply inverting the real time factor.
 
 Engine | Real Time Factor | Average CPU Usage | Memory Usage
 :---: | :---: | :---: | :---:
