@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
         total_processed_time_usec += (frame_length * 1e6) / SAMPLE_RATE;
     }
 
-    const double real_time_factor = total_processed_time_usec / total_cpu_time_usec;
+    const double real_time_factor = total_cpu_time_usec / total_processed_time_usec;
     printf("real time factor is: %f\n", real_time_factor);
 
     fclose(wav);

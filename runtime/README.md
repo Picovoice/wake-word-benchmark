@@ -17,9 +17,9 @@ All the measurements are done on **Raspberry Pi 3**. The wake-word for testing i
 
 ## Real Time Factor
 
-The [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485) is ratio of length of audio input to processing time.
-It can be thought of as inverse of average CPU usage. It is a common metric for measuring the performance of speech recognition system. For
-example, if it takes an engine 2 seconds to process a 24 second audio file it has a real time factor of 12. The higher
+The [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485) is ratio of processing time to length of input audio.
+It can be thought of as average CPU usage. It is a common metric for measuring the performance of speech recognition system. For
+example, if it takes an engine 1 seconds to process a 10 second audio file it has a real time factor of 0.1. The lower
 the real time factor the more computationally-efficient (faster) the engine is.
 
 ### Snowboy
@@ -72,7 +72,7 @@ For PocketSphinx we opt for simpler method of measuring the processing time from
 time  pocketsphinx_continuous -logfn /dev/null -keyphrase alexa -infile engines/porcupine/resources/audio_samples/multiple_keywords.wav
 ```
 
-Then divide the length of WAV file (in seconds) by the output of previous command (i.e. processing time). 
+Then divide the output of previous command (i.e. processing time) by the length of WAV file (in seconds). 
 
 ## Memory
 
