@@ -139,8 +139,8 @@ Engine | Real Time Factor | Average CPU Usage | Memory Usage
 :---: | :---: | :---: | :---:
 PocketSphinx | 0.32 | 31.75% | 15.58 MB
 Snowboy | 0.19 | 18.94% | 2.43 MB
-Porcupine | 0.07| 7.39% | 1.38 MB
-Porcupine Tiny | 0.03 | 3.42% | 0.24  MB
+Porcupine | 0.07| 7.31% | 1.35 MB
+Porcupine Tiny | 0.03 | 3.33% | 0.22  MB
 
 # FAQ
 
