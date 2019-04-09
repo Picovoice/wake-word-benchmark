@@ -17,104 +17,96 @@
 import argparse
 import logging
 import multiprocessing
-import time
 
 from dataset import *
 from engine import *
-from wakeword_executor import WakeWordExecutor
+from mixer import create_test_files
 
-# Filter out logs from sox.
-logging.getLogger('sox').setLevel(logging.ERROR)
 logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)
 
-parser = argparse.ArgumentParser(description='Benchmark for different wake-word engines')
 
-parser.add_argument(
-    '--common_voice_directory',
-    type=str,
-    help='root directory of Common Voice dataset',
-    required=True)
+def run(engine_type):
+    pcm, sample_rate = soundfile.read(speech_path, dtype=np.int16)
+    assert sample_rate == Dataset.sample_rate()
 
-parser.add_argument(
-    '--alexa_directory',
-    type=str,
-    help='root directory of Alexa dataset',
-    required=True)
+    pcm_length_hour = pcm.size / (Dataset.sample_rate() * 3600)
 
-parser.add_argument(
-    '--demand_directory',
-    type=str,
-    help='root directory of Demand dataset',
-    required=True)
+    keyword_times_sec = list()
+    with open(label_path, 'r') as f:
+        for line in f.readlines():
+            keyword_times_sec.append(tuple(float(x) for x in line.strip('\n').split(', ')))
 
-parser.add_argument(
-    '--output_directory',
-    type=str,
-    help='output directory to save the results')
+    num_keywords = len(keyword_times_sec)
 
-parser.add_argument(
-    '--add_noise',
-    action='store_true',
-    default=False,
-    help='add noise to the datasets')
+    frame_length = Engine.frame_length()
+    num_frames = pcm.size // frame_length
 
+    labels = np.zeros((num_frames,), dtype=np.bool)
+    for start_sec, end_sec in keyword_times_sec:
+        start_frame = int(start_sec * Dataset.sample_rate() // frame_length)
+        end_frame = int((end_sec * Dataset.sample_rate() + (frame_length - 1)) // frame_length)
+        labels[start_frame:(end_frame + 1)] = True
 
-def run_detection(engine_type):
-    """
-    Run wake-word detection for a given engine.
-
-    :param engine_type: type of the engine.
-    :return: tuple of engine and list of accuracy information for different detection sensitivities.
-    """
-
-    res = []
+    result = dict()
     for sensitivity in Engine.sensitivity_range(engine_type):
-        start_time = time.process_time()
+        detector = Engine.create(engine_type, keyword='alexa', sensitivity=sensitivity)
 
-        executor = WakeWordExecutor(engine_type, sensitivity, keyword, dataset, noise_dataset=noise_dataset)
-        false_alarm_per_hour, miss_rate = executor.execute()
-        executor.release()
+        num_false_alarms = 0
+        num_true_detects = 0
+        for i in range(num_frames):
+            frame = pcm[(i * frame_length):((i + 1) * frame_length)]
+            if detector.process(frame):
+                if labels[i]:
+                    num_true_detects += 1
+                else:
+                    num_false_alarms += 1
 
-        end_time = time.process_time()
+        detector.release()
 
-        logging.info('[%s][%s] took %s minutes to finish', engine_type.value, sensitivity, (end_time - start_time) / 60)
+        miss_rate = (num_keywords - num_true_detects) / num_keywords
+        false_alarm_per_hour = num_false_alarms / pcm_length_hour
 
-        res.append(dict(sensitivity=sensitivity, false_alarm_per_hour=false_alarm_per_hour, miss_rate=miss_rate))
+        logging.info(
+            '[%s - %.2f] fr: %.2f fa: %.2f' % (engine_type.value, sensitivity, miss_rate, false_alarm_per_hour))
 
-    return engine_type.value, res
+        result[sensitivity] = miss_rate, false_alarm_per_hour
 
+    return engine_type, result
+
+
+def save(results):
+    for engine, result in results:
+        path = os.path.join(os.path.dirname(__file__), '%s.csv' % engine.value)
+        with open(path, 'w') as f:
+            for sensitivity in Engine.sensitivity_range(engine):
+                miss_rate, false_alarms_per_hour = result[sensitivity]
+                f.write('%f, %f\n' % (miss_rate, false_alarms_per_hour))
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--librispeech_dataset_path', required=True)
+parser.add_argument('--demand_dataset_path', required=True)
 
 if __name__ == '__main__':
-    keyword = 'alexa'
-
     args = parser.parse_args()
 
-    background_dataset = Dataset.create(Datasets.COMMON_VOICE, args.common_voice_directory, exclude_words=keyword)
-    logging.info('loaded background speech dataset with %d examples' % background_dataset.size())
-
-    keyword_dataset = Dataset.create(Datasets.ALEXA, args.alexa_directory)
+    keyword_dataset = Dataset.create(Datasets.KEYWORD, os.path.join(os.path.dirname(__file__), 'audio/alexa'))
     logging.info('loaded keyword dataset with %d examples' % keyword_dataset.size())
 
-    if args.add_noise:
-        noise_dataset = Dataset.create(Datasets.DEMAND, args.demand_directory)
-        logging.info('loaded noise dataset with %d examples' % noise_dataset.size())
-    else:
-        noise_dataset = None
+    background_dataset = Dataset.create(Datasets.LIBRI_SPEECH, args.librispeech_dataset_path, exclude_word='alexa')
+    logging.info('loaded librispeech dataset with %d examples' % background_dataset.size())
 
-    # Interleave the keyword dataset with background dataset to simulate the real-world conditions.
-    dataset = CompositeDataset(datasets=(background_dataset, keyword_dataset), shuffle=True)
+    noise_dataset = Dataset.create(Datasets.DEMAND, args.demand_dataset_path)
+    logging.info('loaded demand dataset with %d examples' % noise_dataset.size())
 
-    # Run the benchmark for each engine in it's own process.
+    speech_path = os.path.join(os.path.dirname(__file__), 'speech.wav')
+    label_path = os.path.join(os.path.dirname(__file__), 'label.txt')
+    create_test_files(
+        speech_path=speech_path,
+        label_path=label_path,
+        keyword_dataset=keyword_dataset,
+        background_dataset=background_dataset,
+        noise_dataset=noise_dataset)
+
     with multiprocessing.Pool() as pool:
-        results = pool.map(run_detection, [e for e in Engines])
-
-    # Save the results.
-    if args.output_directory:
-        if not os.path.exists(args.output_directory):
-            os.makedirs(args.output_directory)
-
-        for engine, result in results:
-            with open(os.path.join(args.output_directory, '%s.csv' % engine), 'w') as f:
-                writer = csv.DictWriter(f, ['sensitivity', 'false_alarm_per_hour', 'miss_rate'])
-                writer.writeheader()
-                writer.writerows(result)
+        save(pool.map(run, [x for x in Engines]))

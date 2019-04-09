@@ -14,225 +14,100 @@
 # limitations under the License.
 #
 
-import csv
 import os
-from collections import namedtuple
 from enum import Enum
 
 import numpy as np
 import soundfile
-import sox
 
 
 class Datasets(Enum):
-    """Different datasets."""
-
-    COMMON_VOICE = 'Mozilla Common Voice'
-    ALEXA = 'Alexa'
     DEMAND = 'DEMAND'
-
-
-AudioMetadata = namedtuple('AudioMetadata', ['path', 'contains_keyword'])
-
-AudioData = namedtuple('AudioData', ['pcm', 'metadata'])
+    KEYWORD = 'Keyword'
+    LIBRI_SPEECH = "LibriSpeech"
 
 
 class Dataset(object):
-    """Base class for dataset."""
+    def __init__(self):
+        self._random = np.random.RandomState(seed=778)
 
-    """
-    Audio sample rate required by wake-word engines under test. All datasets need to provide data with this sample rate.
-    """
-    SAMPLE_RATE = 16000
+    def get(self, index, dtype=np.int16):
+        pcm, sample_rate = soundfile.read(self._paths[index], dtype=dtype)
+        assert sample_rate == self.sample_rate()
+
+        return pcm
+
+    def random(self, dtype=np.int16):
+        return self.get(self._random.randint(low=0, high=self.size()), dtype=dtype)
 
     def size(self):
-        """Number of examples within dataset."""
+        return len(self._paths)
 
-        return len(self._get_metadatas())
-
-    def get_metadata(self, index):
-        """
-        Getter for audio metadata.
-
-        :param index: index of metadata.
-        :return: metadata.
-        """
-
-        return self._get_metadatas()[index]
-
-    def get_data(self, index):
-        """
-        Getter for audio data.
-
-        :param index: index of data.
-        :return: data.
-        """
-
-        metadata = self.get_metadata(index)
-
-        # All engines consume 16-bit encoded audio
-        pcm, sample_rate = soundfile.read(metadata.path, dtype='float64')
-        assert sample_rate == self.SAMPLE_RATE
-        assert pcm.ndim == 1
-
-        # Add 0.5 second silence to the end of files containing keyword as occasionally the user stopped recording right
-        # after uttering the keyword. If the detector needs some time after seeing the keyword to make a decision
-        # (e.g. end-pointing) this is going to artificially increase the miss rates.
-        if metadata.contains_keyword:
-            pcm = np.append(pcm, np.zeros(self.SAMPLE_RATE // 2))
-
-        return AudioData(pcm=pcm, metadata=metadata)
+    @staticmethod
+    def sample_rate():
+        return 16000
 
     @classmethod
-    def create(cls, dataset_type, root, **kwargs):
-        """
-        Factory method.
+    def create(cls, dataset, path, **kwargs):
+        if dataset is Datasets.DEMAND:
+            return DEMANDDataset(path)
+        elif dataset is Datasets.KEYWORD:
+            return KeywordDataset(path)
+        elif dataset is Datasets.LIBRI_SPEECH:
+            return LibriSpeechDataset(path, *kwargs)
+        else:
+            raise ValueError("cannot create dataset of type '%s'", dataset.value)
 
-        :param dataset_type: type of dataset.
-        :param root: path to root of dataset.
-        :param kwargs: keyword arguments.
-        :return: dataset instance.
-        """
-
-        if dataset_type is Datasets.COMMON_VOICE:
-            return CommonVoiceDataset(root, **kwargs)
-        if dataset_type is Datasets.ALEXA:
-            return AlexaDataset(root)
-        if dataset_type is Datasets.DEMAND:
-            return DemandDataset(root)
-
-        raise ValueError('Cannot create dataset of type %s', dataset_type.value)
-
-    def _get_metadatas(self):
-        """Getter for all metadata information within dataset."""
-
+    @property
+    def _paths(self):
         raise NotImplementedError()
 
 
-class CompositeDataset(Dataset):
-    """Wrapper dataset for a collection of datasets."""
+class DEMANDDataset(Dataset):
+    def __init__(self, path):
+        super(DEMANDDataset, self).__init__()
 
-    def __init__(self, datasets, shuffle=True, seed=666):
-        """
-        Constructor.
+        self.__paths = list()
+        for noise_type in os.listdir(path):
+            self.__paths.append(os.path.join(path, '%s/ch01.wav' % noise_type))
+        self.__paths.sort()
 
-        :param datasets: collection of datasets.
-        :param shuffle: flag to indicate if the datasets examples are to be shuffled.
-        :param seed: seed for random number generator used for shuffling.
-        """
-
-        self._metadatas = []
-        for dataset in datasets:
-            for i in range(dataset.size()):
-                self._metadatas.append(dataset.get_metadata(i))
-
-        if shuffle:
-            random = np.random.RandomState(seed=seed)
-            random.shuffle(self._metadatas)
-
-    def _get_metadatas(self):
-        return self._metadatas
+    @property
+    def _paths(self):
+        return self.__paths
 
 
-class CommonVoiceDataset(Dataset):
-    """Mozilla Common Voice Dataset (https://voice.mozilla.org)."""
+class KeywordDataset(Dataset):
+    def __init__(self, path):
+        super(KeywordDataset, self).__init__()
 
-    def __init__(self, root, exclude_words=list()):
-        """
-        Constructor. It converts MP3 files within original dataset into FLAC and caches them.
+        self.__paths = list()
+        for x in os.listdir(path):
+            self.__paths.append(os.path.join(path, x))
+        self.__paths.sort()
 
-        :param root: root of dataset.
-        :param exclude_words: files containing these words in their transcript are excluded.
-        """
-
-        if isinstance(exclude_words, str):
-            exclude_words = [exclude_words]
-
-        self._metadatas = self._load_metadatas(root, exclude_words)
-
-    def _get_metadatas(self):
-        return self._metadatas
-
-    @staticmethod
-    def _load_metadatas(root, exclude_words):
-        metadatas = []
-
-        for part in ['cv-valid-train', 'cv-valid-test', 'cv-valid-dev']:
-            metadata_file = os.path.join(root, '%s.csv' % part)
-
-            with open(metadata_file) as f:
-                reader = csv.DictReader(f)
-
-                for row in reader:
-                    text = row['text'].lower()
-                    up_votes = int(row['up_votes'])
-                    down_votes = int(row['down_votes'])
-
-                    if up_votes < 2 or down_votes > 0 or not text or any(x.lower() in text for x in exclude_words):
-                        continue
-
-                    mp3_path = os.path.join(root, row['filename'])
-                    assert mp3_path.endswith('.mp3')
-
-                    flac_path = mp3_path.replace('.mp3', '.flac')
-                    if not os.path.exists(flac_path):
-                        transformer = sox.Transformer()
-                        transformer.convert(samplerate=Dataset.SAMPLE_RATE, bitdepth=16, n_channels=1)
-                        transformer.build(mp3_path, flac_path)
-
-                    metadatas.append(AudioMetadata(path=flac_path, contains_keyword=False))
-
-        return metadatas
+    @property
+    def _paths(self):
+        return self.__paths
 
 
-class AlexaDataset(Dataset):
-    """Crowd-sourced utterances of Alexa."""
+class LibriSpeechDataset(Dataset):
+    def __init__(self, path, exclude_word):
+        super(LibriSpeechDataset, self).__init__()
 
-    def __init__(self, root):
-        """
-        Constructor.
+        self.__paths = list()
+        for speaker_id in os.listdir(path):
+            speaker_dir = os.path.join(path, speaker_id)
+            for chapter_id in os.listdir(speaker_dir):
+                chapter_dir = os.path.join(speaker_dir, chapter_id)
+                transcript_path = os.path.join(chapter_dir, '%s-%s.trans.txt' % (speaker_id, chapter_id))
+                with open(transcript_path) as f:
+                    for line in f.readlines():
+                        flac_basename, transcript = line.split(' ', maxsplit=1)
+                        if exclude_word not in transcript:
+                            self.__paths.append(os.path.join(chapter_dir, '%s.flac' % flac_basename))
+        self.__paths.sort()
 
-        :param root: root of dataset.
-        """
-
-        self._metadatas = self._load_metadata(root)
-
-    def _get_metadatas(self):
-        return self._metadatas
-
-    @staticmethod
-    def _load_metadata(root):
-        metadatas = []
-        for directory, _, filenames in os.walk(root):
-            for filename in filenames:
-                if filename.endswith('.wav'):
-                    metadatas.append(AudioMetadata(path=os.path.join(directory, filename), contains_keyword=True))
-
-        return metadatas
-
-
-class DemandDataset(Dataset):
-    """DEMAND noise dataset (http://parole.loria.fr/DEMAND)"""
-
-    def __init__(self, root):
-        """
-        Constructor.
-
-        :param root: root of dataset.
-        """
-
-        self._metadatas = self._load_metadatas(root)
-
-    def _get_metadatas(self):
-        return self._metadatas
-
-    @staticmethod
-    def _load_metadatas(root):
-        metadatas = []
-
-        for directory, _, filenames in os.walk(root):
-            for filename in filenames:
-                if filename == 'ch01.wav':
-                    metadatas.append(AudioMetadata(path=os.path.join(directory, filename), contains_keyword=False))
-
-        return metadatas
+    @property
+    def _paths(self):
+        return self.__paths

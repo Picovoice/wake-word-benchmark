@@ -1,26 +1,26 @@
 # Runtime Measurements
 
-Below the methodology for measuring runtime (i.e. real-time factor and memory) metrics of different wake-word engines is
-explained. The goal is to measure only the CPU and memory consumed by the engine and not remaining tasks such as 
-audio reading (from file or microphone), moving data between C and different language bindings, etc when possible.
+Below the methodology for measuring the real-time factor of different wake-word engines is explained. The goal is to
+measure only the CPU consumed by the engine and not remaining tasks such as audio reading (from file or microphone),
+moving data between C and different language bindings, etc when possible.
 
 For Porcupine and Snowboy utility programs are created [here](/runtime/porcupine_runtime_test.c) and
 [here](/runtime/snowboy_runtime_test.cpp). These programs read a WAV file and pass it through the corresponding wake-word
-engine frame-by-frame as is the case in real time applications. They only measure the time spent in the corresponding 
+engine frame-by-frame as is the case in real time applications. They only measure the time spent in the corresponding
 processing/detection method of the engines.
 
-For PocketSphinx the task of creating such utility program is more involved and hence we opt for easier method of
-measuring the processing time of its commandline interface. This is essentially an upper bound on actual processing time
-of PocketSphinx.
+For PocketSphinx the task of creating such a utility program is more involved and hence we opt for an easier method of
+measuring the processing time of its commandline interface. This is essentially an upper bound on the actual processing
+time of PocketSphinx.
 
-All the measurements are done on **Raspberry Pi 3**. The wake-word for testing is 'Alexa' same as the accuracy benchmark.
+All the measurements are done on Raspberry Pi 3.
 
 ## Real Time Factor
 
-The [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485) is ratio of processing time to length of input audio.
-It can be thought of as average CPU usage. It is a common metric for measuring the performance of speech recognition system. For
-example, if it takes an engine 1 seconds to process a 10 second audio file it has a real time factor of 0.1. The lower
-the real time factor the more computationally-efficient (faster) the engine is.
+The [real time factor](http://enacademic.com/dic.nsf/enwiki/3796485) is the ratio of processing time to the length of
+input audio. It can be thought of as average CPU usage. It is a common metric for measuring the performance of speech
+recognition systems. For example, if it takes an engine 1 seconds to process a 10-second audio file it has a real-time
+factor of 0.1. The lower the real-time factor the more computationally-efficient (faster) the engine is.
 
 ### Snowboy
 
@@ -47,21 +47,22 @@ First, we need to build the utility program for Porcupine. From the root of the 
 command line
 
 ```bash
-gcc -O3 -o runtime/porcupine_runtime_test -I engines/porcupine/include/ runtime/porcupine_runtime_test.c \
-engines/porcupine/lib/raspberry-pi/cortex-a53/libpv_porcupine.a -lm
+gcc -O3 -o runtime/porcupine_runtime_test -I engines/porcupine/include/ runtime/porcupine_runtime_test.c -lm -ldl
 ```
 
 it creates a binary file called `runtime/porcupine_runtime_test`. Next we run the file on a sample audio file to measure
-the realtime factor for each variant (standard and tiny) by
+the realtime factor for each variant (standard and compressed) by
 
 ```bash
 ./runtime/porcupine_runtime_test engines/porcupine/resources/audio_samples/multiple_keywords.wav \
-engines/porcupine/lib/common/porcupine_params.pv engines/porcupine/resources/keyword_files/alexa_raspberrypi.ppn
+engines/porcupine/lib/common/porcupine_params.pv engines/porcupine/resources/keyword_files/raspberrypi/picovoice_raspberrypi.ppn \
+engines/porcupine/lib/raspberry-pi/cortex-a53/libpv_porcupine.so
 ```
 
 ```bash
 ./runtime/porcupine_runtime_test engines/porcupine/resources/audio_samples/multiple_keywords.wav \
-engines/porcupine/lib/common/porcupine_tiny_params.pv engines/porcupine/resources/keyword_files/alexa_raspberrypi_tiny.ppn
+engines/porcupine/lib/common/porcupine_compressed_params.pv engines/porcupine/resources/keyword_files/raspberrypi/picovoice_raspberrypi_compressed.ppn \
+engines/porcupine/lib/raspberry-pi/cortex-a53/libpv_porcupine.so
 ```
 
 ### PocketSphinx
@@ -73,20 +74,3 @@ time  pocketsphinx_continuous -logfn /dev/null -keyphrase alexa -infile engines/
 ```
 
 Then divide the output of previous command (i.e. processing time) by the length of WAV file (in seconds). 
-
-## Memory
-
-We use [valgrind's](http://valgrind.org/) [massif](http://valgrind.org/docs/manual/ms-manual.html) tool for measuring used memory.
-Simply run any of the commands above prepended with `valgrind --tool=massif` and then read the generated output file with
-`ms_print`. For example:
-
-```bash
-valgrind --tool=massif ./runtime/porcupine_runtime_test engines/porcupine/resources/audio_samples/multiple_keywords.wav \
-engines/porcupine/lib/common/porcupine_params.pv engines/porcupine/resources/keyword_files/alexa_raspberrypi.ppn
-```
-
-and then read out the generated file by
-
-```bash
-ms_print massif.out.XXXX
-```

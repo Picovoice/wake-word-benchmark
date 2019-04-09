@@ -15,7 +15,6 @@
 #
 
 import os
-import platform
 from enum import Enum
 
 import numpy as np
@@ -27,104 +26,69 @@ from engines import snowboydetect
 
 
 class Engines(Enum):
-    """Different wake-word engines."""
-
-    POCKET_SPHINX = 'Pocketsphinx'
+    POCKET_SPHINX = 'PocketSphinx'
     PORCUPINE = 'Porcupine'
-    PORCUPINE_TINY = "PorcupineTiny"
+    PORCUPINE_COMPRESSED = "PorcupineCompressed"
     SNOWBOY = 'Snowboy'
 
 
 class Engine(object):
-    """Base class for wake-word engine."""
-
     def process(self, pcm):
-        """
-        Processes a frame of audio looking for a specific wake-word.
-
-        :param pcm: frame of audio.
-        :return: result of detection.
-        """
-
         raise NotImplementedError()
 
     def release(self):
-        """Releases the resources acquired by the engine."""
-
         raise NotImplementedError()
 
     def __str__(self):
         raise NotImplementedError()
 
-    @property
-    def frame_length(self):
-        """Number of audio samples per frame expected by the engine."""
-
+    @staticmethod
+    def frame_length():
         return 512
 
     @staticmethod
     def sensitivity_range(engine_type):
-        """Getter for sensitivity range of different engines to use in the benchmark."""
-
-        if engine_type is Engines.PORCUPINE:
-            return np.linspace(0.0, 1.0, 10)
-        if engine_type is Engines.PORCUPINE_TINY:
-            return np.linspace(0.0, 1.0, 10)
         if engine_type is Engines.POCKET_SPHINX:
-            return np.logspace(-10, 20, 10)
-        if engine_type is Engines.SNOWBOY:
-            return np.linspace(0.4, 0.6, 10)
-
-        raise ValueError('No sensitivity range for %s', engine_type.value)
+            return np.logspace(20, -4, 8)
+        elif engine_type is Engines.PORCUPINE:
+            return np.linspace(0.0, 1.0, 8)
+        elif engine_type is Engines.PORCUPINE_COMPRESSED:
+            return np.linspace(0.0, 1.0, 8)
+        elif engine_type is Engines.SNOWBOY:
+            return np.linspace(0.4, 0.72, 8)
+        else:
+            raise ValueError("no sensitivity range for '%s'", engine_type.value)
 
     @staticmethod
-    def create(engine_type, keyword, sensitivity):
-        """
-        Factory method.
-
-        :param engine_type: type of engine.
-        :param keyword: keyword to be detected.
-        :param sensitivity: detection sensitivity.
-        :return: engine instance.
-        """
-
-        if engine_type is Engines.POCKET_SPHINX:
+    def create(engine, keyword, sensitivity):
+        if engine is Engines.POCKET_SPHINX:
             return PocketSphinxEngine(keyword, sensitivity)
-        if engine_type is Engines.PORCUPINE:
+        elif engine is Engines.PORCUPINE:
             return PorcupineEngine(keyword, sensitivity)
-        if engine_type is Engines.PORCUPINE_TINY:
-            return PorcupineTinyEngine(keyword, sensitivity)
-        if engine_type is Engines.SNOWBOY:
+        elif engine is Engines.PORCUPINE_COMPRESSED:
+            return PorcupineCompressedEngine(keyword, sensitivity)
+        elif engine is Engines.SNOWBOY:
             return SnowboyEngine(keyword, sensitivity)
-
-        return ValueError('Cannot create engine of type %s', engine_type.value)
+        else:
+            ValueError("cannot create engine of type '%s'", engine.value)
 
 
 class PocketSphinxEngine(Engine):
-    """Pocketsphinx engine."""
-
     def __init__(self, keyword, sensitivity):
-        """
-        Constructor.
-
-        :param keyword: keyword to be detected.
-        :param sensitivity: detection sensitivity.
-        """
-
-        # Set the configuration.
         config = Decoder.default_config()
         config.set_string('-logfn', '/dev/null')
-        # Set recognition model to US
         config.set_string('-hmm', os.path.join(get_model_path(), 'en-us'))
         config.set_string('-dict', os.path.join(get_model_path(), 'cmudict-en-us.dict'))
         config.set_string('-keyphrase', keyword)
         config.set_float('-kws_threshold', sensitivity)
+
         self._decoder = Decoder(config)
         self._decoder.start_utt()
 
     def process(self, pcm):
-        pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16).tobytes()
-        self._decoder.process_raw(pcm, False, False)
+        assert pcm.dtype == np.int16
+
+        self._decoder.process_raw(pcm.tobytes(), False, False)
 
         detected = self._decoder.hyp()
         if detected:
@@ -141,29 +105,16 @@ class PocketSphinxEngine(Engine):
 
 
 class PorcupineEngineBase(Engine):
-    """Base class for different variants of Porcupine engine."""
-
-    def __init__(self, sensitivity, model_file_path, keyword_file_path):
-        """
-        Constructor.
-
-        :param sensitivity: detection sensitivity.
-        :param model_file_path: path to model file.
-        :param keyword_file_path: path to keyword file.
-        """
-
-        library_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/lib/linux/%s/libpv_porcupine.so' % platform.machine())
-
+    def __init__(self, model_file_path, keyword_file_path, sensitivity):
         self._porcupine = Porcupine(
-            library_path=library_path,
+            library_path=os.path.join(self._repo_path, 'lib/linux/x86_64/libpv_porcupine.so'),
             model_file_path=model_file_path,
             keyword_file_path=keyword_file_path,
             sensitivity=sensitivity)
 
     def process(self, pcm):
-        pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16)
+        assert pcm.dtype == np.int16
+
         return self._porcupine.process(pcm)
 
     def release(self):
@@ -172,68 +123,35 @@ class PorcupineEngineBase(Engine):
     def __str__(self):
         raise NotImplementedError()
 
+    @property
+    def _repo_path(self):
+        return os.path.join(os.path.dirname(__file__), 'engines/porcupine')
+
 
 class PorcupineEngine(PorcupineEngineBase):
-    """Original variant of Porcupine."""
-
     def __init__(self, keyword, sensitivity):
-        """
-        Constructor.
-
-        :param keyword: keyword to be detected.
-        :param sensitivity: detection sensitivity.
-        """
-
-        model_file_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/lib/common/porcupine_params.pv')
-
-        keyword_file_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/resources/keyword_files/%s_linux.ppn' % keyword.lower())
-
-        super().__init__(sensitivity, model_file_path, keyword_file_path)
+        super().__init__(
+            os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
+            os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower()),
+            sensitivity)
 
     def __str__(self):
         return 'Porcupine'
 
 
-class PorcupineTinyEngine(PorcupineEngineBase):
-    """Tiny variant of Porcupine engine."""
-
+class PorcupineCompressedEngine(PorcupineEngineBase):
     def __init__(self, keyword, sensitivity):
-        """
-        Constructor.
-
-        :param keyword: keyword to be detected.
-        :param sensitivity: detection sensitivity.
-        """
-
-        model_file_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/lib/common/porcupine_tiny_params.pv')
-
-        keyword_file_path = os.path.join(
-            os.path.dirname(__file__),
-            'engines/porcupine/resources/keyword_files/%s_linux_tiny.ppn' % keyword.lower())
-
-        super().__init__(sensitivity, model_file_path, keyword_file_path)
+        super().__init__(
+            os.path.join(self._repo_path, 'lib/common/porcupine_compressed_params.pv'),
+            os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux_compressed.ppn' % keyword.lower()),
+            sensitivity)
 
     def __str__(self):
-        return 'Porcupine Tiny'
+        return 'Porcupine Compressed'
 
 
 class SnowboyEngine(Engine):
-    """Snowboy engine."""
-
     def __init__(self, keyword, sensitivity):
-        """
-        Constructor.
-
-        :param keyword: keyword to be detected.
-        :param sensitivity: detection sensitivity.
-        """
-
         keyword = keyword.lower()
         if keyword == 'alexa':
             model_relative_path = 'engines/snowboy/resources/alexa/alexa-avs-sample-app/alexa.umdl'
@@ -246,8 +164,9 @@ class SnowboyEngine(Engine):
         self._snowboy.SetSensitivity(str(sensitivity).encode())
 
     def process(self, pcm):
-        pcm = (np.iinfo(np.int16).max * pcm).astype(np.int16).tobytes()
-        return self._snowboy.RunDetection(pcm) == 1
+        assert pcm.dtype == np.int16
+
+        return self._snowboy.RunDetection(pcm.tobytes()) == 1
 
     def release(self):
         pass
