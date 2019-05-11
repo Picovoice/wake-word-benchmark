@@ -33,27 +33,37 @@ def _pcm_energy(pcm):
     return frames_power.max()
 
 
-def _noise_scale(speech, noise, snr_db):
+def _speech_scale(speech, noise, snr_db):
     assert speech.shape[0] == noise.shape[0]
 
-    return np.sqrt(_pcm_energy(speech) / (_pcm_energy(noise) * (10 ** (snr_db / 10))))
+    speech_energy = _pcm_energy(speech)
+    if speech_energy == 0:
+        return 0
+
+    return np.sqrt((_pcm_energy(noise) * (10 ** (snr_db / 10))) / _pcm_energy(speech))
 
 
 def _max_abs(x):
     return max(np.max(x), np.abs(np.min(x)))
 
 
-def _mix_noise(speech, noise_dataset, snr_db):
+def _mix_noise(speech_parts, noise_dataset, snr_db):
+    speech_length = sum(len(x) for x in speech_parts)
+
     parts = list()
-    while sum(x.size for x in parts) < speech.size:
+    while sum(x.size for x in parts) < speech_length:
         x = noise_dataset.random(dtype=np.float32)
         parts.append(x / _max_abs(x))
 
-    noise = np.concatenate(parts)[:speech.size]
+    res = np.concatenate(parts)[:speech_length]
 
-    noisy_speech = speech + (noise * _noise_scale(speech, noise, snr_db))
+    start_index = 0
+    for speech_part in speech_parts:
+        end_index = start_index + len(speech_part)
+        res[start_index:end_index] += speech_part * _speech_scale(speech_part, res[start_index:end_index], snr_db)
+        start_index = end_index
 
-    return noisy_speech
+    return res
 
 
 def _assemble_background(background_dataset, length_samples, background_probability=0.2):
@@ -86,7 +96,7 @@ def _assemble_speech(keyword_dataset, background_dataset, length_hour):
         parts.append(keyword_part / _max_abs(keyword_part))
         parts.extend(_assemble_background(background_dataset, background_length_samples))
 
-    return np.concatenate(parts), keyword_times_sec
+    return parts, keyword_times_sec
 
 
 def create_test_files(
@@ -96,10 +106,10 @@ def create_test_files(
         background_dataset,
         noise_dataset,
         length_hour=24,
-        snr_db=0):
-    speech, keyword_times_sec = _assemble_speech(keyword_dataset, background_dataset, length_hour)
-    speech = _mix_noise(speech, noise_dataset, snr_db)
-    speech /= (4 * _max_abs(speech))
+        snr_db=10):
+    speech_parts, keyword_times_sec = _assemble_speech(keyword_dataset, background_dataset, length_hour)
+    speech = _mix_noise(speech_parts, noise_dataset, snr_db)
+    speech /= _max_abs(speech)
 
     soundfile.write(speech_path, speech, samplerate=Dataset.sample_rate())
 

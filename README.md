@@ -5,8 +5,7 @@
 Made in Vancouver, Canada by [Picovoice](https://picovoice.ai)
 
 The purpose of this benchmarking framework is to provide a scientific comparison between different wake word detection
-engines in terms of accuracy and runtime metrics. Currently, the framework is set up for Alexa as the test wake word.
-But it can be configured for any other wake word. While working on [Porcupine](https://github.com/Picovoice/Porcupine)
+engines in terms of accuracy and runtime metrics. While working on [Porcupine](https://github.com/Picovoice/Porcupine)
 we noted that there is a need for such a tool to empower customers to make data-driven decisions.
 
 # Data
@@ -14,10 +13,11 @@ we noted that there is a need for such a tool to empower customers to make data-
 [LibriSpeech](http://www.openslr.org/12/) (test_clean portion) is used as background dataset. It can be downloaded
 from [OpenSLR](http://www.openslr.org/resources/12/test-clean.tar.gz).
 
-Furthermore, 329 recordings of the word Alexa from 89 distinct speakers are used. The recordings are crowd-sourced using an
-Android mobile application. The recordings are stored within the repository [here](audio/alexa).
+Furthermore, more than 300 recordings of six keywords (alexa, computer, jarvis, smart mirror, snowboy, and view glass)
+from more than 50 distinct speakers are used. The recordings are crowd-sourced. The recordings are stored within the
+repository [here](audio/).
 
-In order to simulate real-world situations, the data is mixed with noise (at 0 dB SNR). For this purpose, we use
+In order to simulate real-world situations, the data is mixed with noise (at 10 dB SNR). For this purpose, we use
 [DEMAND](https://asa.scitation.org/doi/abs/10.1121/1.4799597) dataset which has noise recording in 18 different
 environments (e.g. kitchen, office, traffic, etc.). It can be downloaded from
 [Kaggle](https://www.kaggle.com/aanhari/demand-dataset).
@@ -26,7 +26,10 @@ environments (e.g. kitchen, office, traffic, etc.). It can be downloaded from
 
 Three wake-word engines are used. [PocketSphinx](https://github.com/cmusphinx/pocketsphinx) which can
 be installed using [PyPI](https://pypi.org/project/pocketsphinx/). [Porcupine](https://github.com/Picovoice/Porcupine)
-and [Snowboy](https://github.com/Kitt-AI/snowboy) which are included as submodules in this repository. 
+and [Snowboy](https://github.com/Kitt-AI/snowboy) which are included as submodules in this repository. The Snowboy engine
+has a audio frontend component which is not normally a part of wake word engines and is considered a  separate part of
+audio processing chain. The other two engines have not such component in them. We enabled this component in Snowboy engine
+for this benchmark as this is the optimal way of running it. 
 
 # Metric
 
@@ -43,8 +46,7 @@ computationally efficient (faster).
 
 ### Prerequisites
 
-The benchmark has been developed on Ubuntu 16.04 with Python 3.5. It should be possible to run it on a Mac machine
-or different distributions of Linux but has not been tested. Clone the repository using
+The benchmark has been developed on Ubuntu 16.04 with Python 3.5. Clone the repository using
 
 ```bash
 git clone --recurse-submodules git@github.com:Picovoice/wakeword-benchmark.git
@@ -66,7 +68,7 @@ python benchmark.py -h
 The benchmark can be run using the following command from the root of the repository
 
 ```bash
-python benchmark.py --librispeech_dataset_path ${LIBRISPEECH_DATASET_PATH} --demand_dataset_path ${DEMAND_DATASET_PATH}
+python benchmark.py --librispeech_dataset_path ${LIBRISPEECH_DATASET_PATH} --demand_dataset_path ${DEMAND_DATASET_PATH} --keyword ${KEYWORD}
 ```
 
 ### Running the Runtime Benchmark
@@ -77,18 +79,35 @@ Refer to runtime [documentation](/runtime/README.md).
 
 ## Accuracy
 
-Below is the result (ROC curve) of running the benchmark framework.
+Below is the result of running the benchmark framework averaged on six different keywords. The plot below shows the miss
+rate of different engines at 1 false alarm per 10 hours. The lower the miss rate the more accurate the engine is. Detailed
+ROC curves for each keyword are available in the Appendix section below.
 
-![](doc/img/benchmark_roc.png)
+![](doc/img/summary.png)
 
 
 ## Runtime
 
-Below are the runtime measurements on a Raspberry Pi 3.
+Below are the runtime measurements on a Raspberry Pi 3. For Snowboy the runtime highly-depends on the keyword. Therefore
+we measured the CPU usage for each keyword and used the average.
 
 Engine | Real Time Factor | Average CPU Usage
 :---: | :---: | :---:
 PocketSphinx | 0.32 | 31.75%
 Porcupine | 0.06| 5.67%
 Porcupine Compressed | 0.02 | 2.43%
-Snowboy | 0.19 | 18.94%
+Snowboy | 0.19 | 24.82%
+
+## Detailed ROC Curves
+
+![](doc/img/alexa_roc.png)
+
+![](doc/img/computer_roc.png)
+
+![](doc/img/jarvis_roc.png)
+
+![](doc/img/smart_mirror_roc.png)
+
+![](doc/img/snowboy_roc.png)
+
+![](doc/img/view_glass_roc.png)

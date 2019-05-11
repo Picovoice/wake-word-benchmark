@@ -15,6 +15,7 @@
 #
 
 import os
+from collections import namedtuple
 from enum import Enum
 
 import numpy as np
@@ -32,6 +33,9 @@ class Engines(Enum):
     SNOWBOY = 'Snowboy'
 
 
+SensitivityInfo = namedtuple('SensitivityInfo', 'min, max, step')
+
+
 class Engine(object):
     def process(self, pcm):
         raise NotImplementedError()
@@ -47,15 +51,15 @@ class Engine(object):
         return 512
 
     @staticmethod
-    def sensitivity_range(engine_type):
+    def sensitivity_info(engine_type):
         if engine_type is Engines.POCKET_SPHINX:
-            return np.logspace(20, -4, 8)
+            return SensitivityInfo(-21, 15, 3)
         elif engine_type is Engines.PORCUPINE:
-            return np.linspace(0.0, 1.0, 8)
+            return SensitivityInfo(0, 1, 0.1)
         elif engine_type is Engines.PORCUPINE_COMPRESSED:
-            return np.linspace(0.0, 1.0, 8)
+            return SensitivityInfo(0, 1, 0.1)
         elif engine_type is Engines.SNOWBOY:
-            return np.linspace(0.4, 0.72, 8)
+            return SensitivityInfo(0, 1, 0.05)
         else:
             raise ValueError("no sensitivity range for '%s'", engine_type.value)
 
@@ -79,8 +83,8 @@ class PocketSphinxEngine(Engine):
         config.set_string('-logfn', '/dev/null')
         config.set_string('-hmm', os.path.join(get_model_path(), 'en-us'))
         config.set_string('-dict', os.path.join(get_model_path(), 'cmudict-en-us.dict'))
-        config.set_string('-keyphrase', keyword)
-        config.set_float('-kws_threshold', sensitivity)
+        config.set_string('-keyphrase', keyword if keyword != 'snowboy' else 'snow boy')
+        config.set_float('-kws_threshold', 10 ** -sensitivity)
 
         self._decoder = Decoder(config)
         self._decoder.start_utt()
@@ -156,12 +160,23 @@ class SnowboyEngine(Engine):
         if keyword == 'alexa':
             model_relative_path = 'engines/snowboy/resources/alexa/alexa-avs-sample-app/alexa.umdl'
         else:
-            model_relative_path = 'engines/snowboy/resources/models/%s.umdl' % keyword
+            model_relative_path = 'engines/snowboy/resources/models/%s.umdl' % keyword.replace(' ', '_')
 
         model_str = os.path.join(os.path.dirname(__file__), model_relative_path).encode()
         resource_filename = os.path.join(os.path.dirname(__file__), 'engines/snowboy/resources/common.res').encode()
         self._snowboy = snowboydetect.SnowboyDetect(resource_filename=resource_filename, model_str=model_str)
-        self._snowboy.SetSensitivity(str(sensitivity).encode())
+
+        # https://github.com/Kitt-AI/snowboy#pretrained-universal-models
+
+        if keyword == 'jarvis':
+            self._snowboy.SetSensitivity(('%f,%f' % (sensitivity, sensitivity)).encode())
+        else:
+            self._snowboy.SetSensitivity(str(sensitivity).encode())
+
+        if keyword in {'alexa', 'computer', 'jarvis', 'view glass'}:
+            self._snowboy.ApplyFrontend(True)
+        else:
+            self._snowboy.ApplyFrontend(False)
 
     def process(self, pcm):
         assert pcm.dtype == np.int16

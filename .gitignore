@@ -1,5 +1,5 @@
 *.pyc
 .idea/
 *.csv
-*.wav
-*.txt
+/*.wav
+/*.txt

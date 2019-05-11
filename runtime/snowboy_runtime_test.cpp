@@ -24,14 +24,15 @@
  * with sampling rate of 16000 and measures duration of file and execution time.
  */
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        std::cout << "usage: pv_snowboy_speed_test wav_path resource_path model_path" << std::endl;
+    if (argc != 5) {
+        std::cout << "usage: pv_snowboy_speed_test wav_path resource_path model_path keyword" << std::endl;
         return 1;
     }
 
     const char *wav_path = argv[1];
     std::string resource_path = argv[2];
     std::string model_path = argv[3];
+    std::string keyword = argv[4];
 
     FILE *wav = fopen(wav_path, "rb");
     if (!wav) {
@@ -54,9 +55,22 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // https://github.com/Kitt-AI/snowboy#pretrained-universal-models
+
     snowboy::SnowboyDetect detector(resource_path, model_path);
-    detector.SetSensitivity(std::string("0.5"));
+    if (keyword == "jarvis") {
+        detector.SetSensitivity(std::string("0.5,0.5"));
+    } else {
+        detector.SetSensitivity(std::string("0.5"));
+    }
+
     detector.SetAudioGain(1.0);
+
+    if (keyword == "alexa" || keyword == "computer" || keyword == "jarvis" || keyword == "view glass") {
+        detector.ApplyFrontend(true);
+    } else {
+        detector.ApplyFrontend(true);
+    }
 
     static const int SAMPLE_RATE = 16000;
 
