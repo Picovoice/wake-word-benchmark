@@ -133,6 +133,37 @@ def plot_bar_chart(target_false_alarm_per_hour=0.1):
     plt.show()
 
 
+def plot_cpu_chart():
+    fig, ax = plt.subplots()
+
+    engine_cpu_usage = [
+        (Engines.POCKET_SPHINX.value, 31.75),
+        (Engines.SNOWBOY.value, 24.82),
+        (Engines.PORCUPINE.value, 5.67),
+        (Engines.PORCUPINE_COMPRESSED.value, 2.43)
+    ]
+
+    engines = [x[0] for x in engine_cpu_usage]
+    cpu_usages = [x[1] for x in engine_cpu_usage]
+
+    index = np.arange(len(engine_cpu_usage))
+
+    ax.bar(index, cpu_usages, 0.4, color='g')
+
+    for i in index:
+        ax.text(i - 0.1, engine_cpu_usage[i][1] + 1, '%.2f' % engine_cpu_usage[i][1], color='g')
+
+    ax.set_xlabel('engines')
+    ax.set_ylabel('CPU usage %')
+    ax.set_ylim(0, 40)
+    ax.set_title('average CPU usage on Raspberry Pi 3')
+    ax.set_xticks(index)
+    ax.set_xticklabels(engines)
+
+    fig.tight_layout()
+    plt.show()
+
+
 if __name__ == '__main__':
     for k in KEYWORDS:
         plot_roc(k)
@@ -141,3 +172,5 @@ if __name__ == '__main__':
         plot_engine_roc(e.value)
 
     plot_bar_chart()
+
+    plot_cpu_chart()

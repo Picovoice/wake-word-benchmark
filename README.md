@@ -88,15 +88,10 @@ ROC curves for each keyword are available in the Appendix section below.
 
 ## Runtime
 
-Below are the runtime measurements on a Raspberry Pi 3. For Snowboy the runtime highly-depends on the keyword. Therefore
+Below is the runtime measurements on a Raspberry Pi 3. For Snowboy the runtime highly-depends on the keyword. Therefore
 we measured the CPU usage for each keyword and used the average.
 
-Engine | Real Time Factor | Average CPU Usage
-:---: | :---: | :---:
-PocketSphinx | 0.32 | 31.75%
-Porcupine | 0.06| 5.67%
-Porcupine Compressed | 0.02 | 2.43%
-Snowboy | 0.19 | 24.82%
+![](doc/img/cpu.png)
 
 ## Detailed ROC Curves
 
