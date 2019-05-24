@@ -40,7 +40,7 @@ def _speech_scale(speech, noise, snr_db):
     if speech_energy == 0:
         return 0
 
-    return np.sqrt((_pcm_energy(noise) * (10 ** (snr_db / 10))) / _pcm_energy(speech))
+    return np.sqrt((_pcm_energy(noise) * (10 ** (snr_db / 10))) / speech_energy)
 
 
 def _max_abs(x):
