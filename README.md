@@ -49,7 +49,7 @@ computationally efficient (faster).
 The benchmark has been developed on Ubuntu 16.04 with Python 3.5. Clone the repository using
 
 ```bash
-git clone --recurse-submodules git@github.com:Picovoice/wakeword-benchmark.git
+git clone --recurse-submodules https://github.com/Picovoice/wakeword-benchmark.git
 ```
 
 Make sure the Python packages in the [requirements.txt](/requirements.txt) are properly installed for your Python
