@@ -46,7 +46,7 @@ computationally efficient (faster).
 
 ### Prerequisites
 
-The benchmark has been developed on Ubuntu 16.04 with Python 3.5. Clone the repository using
+The benchmark has been developed on Ubuntu 18.04 with Python 3.6. Clone the repository using
 
 ```bash
 git clone --recurse-submodules git@github.com:Picovoice/wakeword-benchmark.git
@@ -80,8 +80,7 @@ Refer to runtime [documentation](/runtime/README.md).
 ## Accuracy
 
 Below is the result of running the benchmark framework averaged on six different keywords. The plot below shows the miss
-rate of different engines at 1 false alarm per 10 hours. The lower the miss rate the more accurate the engine is. Detailed
-ROC curves for each keyword are available in the Appendix section below.
+rate of different engines at 1 false alarm per 10 hours. The lower the miss rate the more accurate the engine is.
 
 ![](doc/img/summary.png)
 
@@ -92,17 +91,3 @@ Below is the runtime measurements on a Raspberry Pi 3. For Snowboy the runtime h
 we measured the CPU usage for each keyword and used the average.
 
 ![](doc/img/cpu.png)
-
-## Detailed ROC Curves
-
-![](doc/img/alexa_roc.png)
-
-![](doc/img/computer_roc.png)
-
-![](doc/img/jarvis_roc.png)
-
-![](doc/img/smart_mirror_roc.png)
-
-![](doc/img/snowboy_roc.png)
-
-![](doc/img/view_glass_roc.png)

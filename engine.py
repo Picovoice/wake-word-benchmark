@@ -29,7 +29,6 @@ from engines import snowboydetect
 class Engines(Enum):
     POCKET_SPHINX = 'PocketSphinx'
     PORCUPINE = 'Porcupine'
-    PORCUPINE_COMPRESSED = "PorcupineCompressed"
     SNOWBOY = 'Snowboy'
 
 
@@ -56,8 +55,6 @@ class Engine(object):
             return SensitivityInfo(-21, 15, 3)
         elif engine_type is Engines.PORCUPINE:
             return SensitivityInfo(0, 1, 0.1)
-        elif engine_type is Engines.PORCUPINE_COMPRESSED:
-            return SensitivityInfo(0, 1, 0.1)
         elif engine_type is Engines.SNOWBOY:
             return SensitivityInfo(0, 1, 0.05)
         else:
@@ -69,8 +66,6 @@ class Engine(object):
             return PocketSphinxEngine(keyword, sensitivity)
         elif engine is Engines.PORCUPINE:
             return PorcupineEngine(keyword, sensitivity)
-        elif engine is Engines.PORCUPINE_COMPRESSED:
-            return PorcupineCompressedEngine(keyword, sensitivity)
         elif engine is Engines.SNOWBOY:
             return SnowboyEngine(keyword, sensitivity)
         else:
@@ -108,12 +103,12 @@ class PocketSphinxEngine(Engine):
         return 'PocketSphinx'
 
 
-class PorcupineEngineBase(Engine):
-    def __init__(self, model_file_path, keyword_file_path, sensitivity):
+class PorcupineEngine(Engine):
+    def __init__(self, keyword, sensitivity):
         self._porcupine = Porcupine(
             library_path=os.path.join(self._repo_path, 'lib/linux/x86_64/libpv_porcupine.so'),
-            model_file_path=model_file_path,
-            keyword_file_path=keyword_file_path,
+            model_file_path=os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
+            keyword_file_path=os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower()),
             sensitivity=sensitivity)
 
     def process(self, pcm):
@@ -125,33 +120,11 @@ class PorcupineEngineBase(Engine):
         self._porcupine.delete()
 
     def __str__(self):
-        raise NotImplementedError()
+        return 'Porcupine'
 
     @property
     def _repo_path(self):
         return os.path.join(os.path.dirname(__file__), 'engines/porcupine')
-
-
-class PorcupineEngine(PorcupineEngineBase):
-    def __init__(self, keyword, sensitivity):
-        super().__init__(
-            os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
-            os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower()),
-            sensitivity)
-
-    def __str__(self):
-        return 'Porcupine'
-
-
-class PorcupineCompressedEngine(PorcupineEngineBase):
-    def __init__(self, keyword, sensitivity):
-        super().__init__(
-            os.path.join(self._repo_path, 'lib/common/porcupine_compressed_params.pv'),
-            os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux_compressed.ppn' % keyword.lower()),
-            sensitivity)
-
-    def __str__(self):
-        return 'Porcupine Compressed'
 
 
 class SnowboyEngine(Engine):
