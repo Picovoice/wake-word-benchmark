@@ -10,7 +10,6 @@ KEYWORDS = {'alexa', 'computer', 'jarvis', 'smart mirror', 'snowboy', 'view glas
 ENGINE_COLORS = {
     Engines.POCKET_SPHINX.value: 'b',
     Engines.PORCUPINE.value: 'm',
-    Engines.PORCUPINE_COMPRESSED.value: 'r',
     Engines.SNOWBOY.value: 'g'
 }
 
@@ -24,75 +23,7 @@ KEYWORD_COLORS = {
 }
 
 
-def plot_roc(keyword):
-    engines_roc = dict()
-
-    for engine in Engines:
-        engine = engine.value
-
-        engines_roc[engine] = list()
-        with open(os.path.join(os.path.dirname(__file__), '%s_%s.csv' % (keyword, engine)), 'r') as f:
-            miss_rates = list()
-            false_alarms_per_hour = list()
-            for line in f.readlines():
-                miss_rate, false_alarm = [float(x) for x in line.strip('\n').split(', ')]
-                miss_rates.append(miss_rate)
-                false_alarms_per_hour.append(false_alarm)
-            engines_roc[engine].append((miss_rates, false_alarms_per_hour))
-
-    for engine in Engines:
-        engine = engine.value
-
-        plt.plot(
-            engines_roc[engine][0][1],
-            engines_roc[engine][0][0],
-            color=ENGINE_COLORS[engine],
-            label=engine,
-            marker='o')
-
-    plt.legend()
-    plt.xlim(0, 1)
-    plt.xlabel('false alarm per hour')
-    plt.ylim(0, 1)
-    plt.ylabel('miss probability')
-    plt.grid(linestyle='--')
-    plt.title(keyword)
-    plt.show()
-
-
-def plot_engine_roc(engine):
-    keywords_roc = dict()
-
-    for keyword in KEYWORDS:
-        keywords_roc[keyword] = list()
-        with open(os.path.join(os.path.dirname(__file__), '%s_%s.csv' % (keyword, engine)), 'r') as f:
-            miss_rates = list()
-            false_alarms_per_hour = list()
-            for line in f.readlines():
-                miss_rate, false_alarm = [float(x) for x in line.strip('\n').split(', ')]
-                miss_rates.append(miss_rate)
-                false_alarms_per_hour.append(false_alarm)
-            keywords_roc[keyword].append((miss_rates, false_alarms_per_hour))
-
-    for keyword in KEYWORDS:
-        plt.plot(
-            keywords_roc[keyword][0][1],
-            keywords_roc[keyword][0][0],
-            color=KEYWORD_COLORS[keyword],
-            label=keyword,
-            marker='o')
-
-    plt.legend()
-    plt.xlim(0, 1)
-    plt.xlabel('false alarm per hour')
-    plt.ylim(0, 1)
-    plt.ylabel('miss probability')
-    plt.grid(linestyle='--')
-    plt.title(engine)
-    plt.show()
-
-
-def plot_bar_chart(target_false_alarm_per_hour=0.1):
+def plot_accuracy_chart(target_false_alarm_per_hour=0.1):
     engine_miss_rates = dict([(x.value, 0) for x in Engines])
 
     for keyword in KEYWORDS:
@@ -104,8 +35,11 @@ def plot_bar_chart(target_false_alarm_per_hour=0.1):
                 false_alarms_per_hour = list()
                 for line in f.readlines():
                     miss_rate, false_alarm = [float(x) for x in line.strip('\n').split(', ')]
-                    miss_rates.append(miss_rate)
-                    false_alarms_per_hour.append(false_alarm)
+                    if len(false_alarms_per_hour) > 0 and false_alarms_per_hour[-1] == false_alarm:
+                        miss_rates[-1] = miss_rate
+                    else:
+                        miss_rates.append(miss_rate)
+                        false_alarms_per_hour.append(false_alarm)
                 engine_miss_rates[engine] +=\
                     np.interp(target_false_alarm_per_hour, false_alarms_per_hour, miss_rates) / len(KEYWORDS)
 
@@ -139,8 +73,7 @@ def plot_cpu_chart():
     engine_cpu_usage = [
         (Engines.POCKET_SPHINX.value, 31.75),
         (Engines.SNOWBOY.value, 24.82),
-        (Engines.PORCUPINE.value, 5.67),
-        (Engines.PORCUPINE_COMPRESSED.value, 2.43)
+        (Engines.PORCUPINE.value, 6.60)
     ]
 
     engines = [x[0] for x in engine_cpu_usage]
@@ -165,12 +98,6 @@ def plot_cpu_chart():
 
 
 if __name__ == '__main__':
-    for k in KEYWORDS:
-        plot_roc(k)
-
-    for e in Engines:
-        plot_engine_roc(e.value)
-
-    plot_bar_chart()
+    plot_accuracy_chart()
 
     plot_cpu_chart()

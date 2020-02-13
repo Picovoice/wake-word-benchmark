@@ -4,10 +4,10 @@ Below the methodology for measuring the real-time factor of different wake-word 
 measure only the CPU consumed by the engine and not remaining tasks such as audio reading (from file or microphone),
 moving data between C and different language bindings, etc when possible.
 
-For Porcupine and Snowboy utility programs are created [here](/runtime/porcupine_runtime_test.c) and
-[here](/runtime/snowboy_runtime_test.cpp). These programs read a WAV file and pass it through the corresponding wake-word
-engine frame-by-frame as is the case in real time applications. They only measure the time spent in the corresponding
-processing/detection method of the engines.
+For Snowboy a utility program is created [here](/runtime/snowboy_runtime_test.cpp). For Porcupine we use the file-based
+C demo application available within the official repository. These programs read a WAV file and pass it through the
+corresponding wake-word engine frame-by-frame as is the case in real time applications. They only measure the time spent
+in the corresponding processing/detection method of the engines.
 
 For PocketSphinx the task of creating such a utility program is more involved and hence we opt for an easier method of
 measuring the processing time of its commandline interface. This is essentially an upper bound on the actual processing
@@ -43,27 +43,7 @@ engines/snowboy/resources/common.res engines/snowboy/resources/alexa/alexa-avs-s
 
 ### Porcupine
 
-First, we need to build the utility program for Porcupine. From the root of the repository execute the following in the
-command line
-
-```bash
-gcc -O3 -o runtime/porcupine_runtime_test -I engines/porcupine/include/ runtime/porcupine_runtime_test.c -lm -ldl
-```
-
-it creates a binary file called `runtime/porcupine_runtime_test`. Next we run the file on a sample audio file to measure
-the realtime factor for each variant (standard and compressed) by
-
-```bash
-./runtime/porcupine_runtime_test engines/porcupine/resources/audio_samples/multiple_keywords.wav \
-engines/porcupine/lib/common/porcupine_params.pv engines/porcupine/resources/keyword_files/raspberrypi/picovoice_raspberrypi.ppn \
-engines/porcupine/lib/raspberry-pi/cortex-a53/libpv_porcupine.so
-```
-
-```bash
-./runtime/porcupine_runtime_test engines/porcupine/resources/audio_samples/multiple_keywords.wav \
-engines/porcupine/lib/common/porcupine_compressed_params.pv engines/porcupine/resources/keyword_files/raspberrypi/picovoice_raspberrypi_compressed.ppn \
-engines/porcupine/lib/raspberry-pi/cortex-a53/libpv_porcupine.so
-```
+Refer to the documentation of the C demo application within the official repository.
 
 ### PocketSphinx
 
