@@ -52,7 +52,7 @@ def run_sensitivity(pcm, num_frames, labels, num_keywords, engine_type, sensitiv
     return miss_rate, false_alarm_per_hour
 
 
-def run(engine_type):
+def run(engine_type, min_false_alarm=0.1, max_false_alarm=0.1):
     pcm, sample_rate = soundfile.read(speech_path, dtype=np.int16)
     assert sample_rate == Dataset.sample_rate()
 
@@ -72,27 +72,21 @@ def run(engine_type):
 
     sensitivity_info = Engine.sensitivity_info(engine_type)
 
-    result = dict()
+    res = dict()
 
     sensitivity = (sensitivity_info.min + sensitivity_info.max) / 2
 
-    while sensitivity >= sensitivity_info.min:
-        result[sensitivity] = run_sensitivity(pcm, num_frames, labels, len(keyword_times_sec), engine_type, sensitivity)
-        if result[sensitivity][1] == 0:
-            break
-        else:
-            sensitivity -= sensitivity_info.step
+    while sensitivity >= sensitivity_info.min and (len(res) == 0 or min(x[1] for x in res.values()) > min_false_alarm):
+        res[sensitivity] = run_sensitivity(pcm, num_frames, labels, len(keyword_times_sec), engine_type, sensitivity)
+        sensitivity -= sensitivity_info.step
 
     sensitivity = (sensitivity_info.min + sensitivity_info.max) / 2 + sensitivity_info.step
 
-    while sensitivity <= sensitivity_info.max:
-        result[sensitivity] = run_sensitivity(pcm, num_frames, labels, len(keyword_times_sec), engine_type, sensitivity)
-        if result[sensitivity][1] > 1:
-            break
-        else:
-            sensitivity += sensitivity_info.step
+    while sensitivity <= sensitivity_info.max and max(x[1] for x in res.values()) < max_false_alarm:
+        res[sensitivity] = run_sensitivity(pcm, num_frames, labels, len(keyword_times_sec), engine_type, sensitivity)
+        sensitivity += sensitivity_info.step
 
-    return engine_type, result
+    return engine_type, res
 
 
 def save(results):
