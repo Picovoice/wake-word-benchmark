@@ -73,7 +73,7 @@ def plot_cpu_chart():
     engine_cpu_usage = [
         (Engines.POCKET_SPHINX.value, 31.75),
         (Engines.SNOWBOY.value, 24.82),
-        (Engines.PORCUPINE.value, 6.60)
+        (Engines.PORCUPINE.value, 3.80)
     ]
 
     engines = [x[0] for x in engine_cpu_usage]
