@@ -22,6 +22,9 @@ KEYWORD_COLORS = {
     'view glass': 'y'
 }
 
+COLOR = (119 / 255, 131 / 255, 143 / 255)
+PV_COLOR = (55 / 255, 125 / 255, 255 / 255)
+
 
 def plot_accuracy_chart(target_false_alarm_per_hour=0.1):
     engine_miss_rates = dict([(x.value, 0) for x in Engines])
@@ -40,28 +43,39 @@ def plot_accuracy_chart(target_false_alarm_per_hour=0.1):
                     else:
                         miss_rates.append(miss_rate)
                         false_alarms_per_hour.append(false_alarm)
-                engine_miss_rates[engine] +=\
+                engine_miss_rates[engine] += \
                     np.interp(target_false_alarm_per_hour, false_alarms_per_hour, miss_rates) / len(KEYWORDS)
-
-    fig, ax = plt.subplots()
 
     engine_miss_rates = sorted(engine_miss_rates.items(), key=lambda x: x[1], reverse=True)
     engines = [x[0] for x in engine_miss_rates]
-    miss_rates = [x[1] for x in engine_miss_rates]
+    miss_rates = [x[1] * 100 for x in engine_miss_rates]
+    indices = np.arange(len(engine_miss_rates))
 
-    index = np.arange(len(engine_miss_rates))
+    fig, ax = plt.subplots()
 
-    ax.bar(index, miss_rates, 0.4, color='b')
+    for spine in plt.gca().spines.values():
+        if spine.spine_type != 'bottom':
+            spine.set_visible(False)
 
-    for i in index:
-        ax.text(i - 0.1, engine_miss_rates[i][1] + 0.05, '%.2f' % engine_miss_rates[i][1], color='b')
+    for i in indices:
+        ax.bar(
+            indices[i],
+            miss_rates[i],
+            0.4,
+            color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
 
-    ax.set_xlabel('engines')
-    ax.set_ylabel('miss probability')
-    ax.set_ylim(0, 1)
-    ax.set_title('miss rates (at 1 false alarm per 10 hours)')
-    ax.set_xticks(index)
+    for i in indices:
+        ax.text(
+            i - 0.075,
+            miss_rates[i] + 2,
+            '%.1f%%' % miss_rates[i],
+            color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
+
+    ax.set_title('Wake Word Miss Rate\n(1 false alarm per %d hours)' % int(1 / target_false_alarm_per_hour))
+    ax.set_ylim(0, max(miss_rates) + 10)
+    ax.set_xticks(indices)
     ax.set_xticklabels(engines)
+    plt.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 
     fig.tight_layout()
     plt.show()
@@ -69,6 +83,10 @@ def plot_accuracy_chart(target_false_alarm_per_hour=0.1):
 
 def plot_cpu_chart():
     fig, ax = plt.subplots()
+
+    for spine in plt.gca().spines.values():
+        if spine.spine_type != 'bottom':
+            spine.set_visible(False)
 
     engine_cpu_usage = [
         (Engines.POCKET_SPHINX.value, 31.75),
@@ -78,20 +96,27 @@ def plot_cpu_chart():
 
     engines = [x[0] for x in engine_cpu_usage]
     cpu_usages = [x[1] for x in engine_cpu_usage]
+    indices = np.arange(len(engine_cpu_usage))
 
-    index = np.arange(len(engine_cpu_usage))
+    for i in indices:
+        ax.bar(
+            indices[i],
+            cpu_usages[i],
+            0.4,
+            color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
 
-    ax.bar(index, cpu_usages, 0.4, color='g')
+    for i in indices:
+        ax.text(
+            i - 0.075,
+            cpu_usages[i] + 1,
+            '%.1f%%' % cpu_usages[i],
+            color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
 
-    for i in index:
-        ax.text(i - 0.1, engine_cpu_usage[i][1] + 1, '%.2f' % engine_cpu_usage[i][1], color='g')
-
-    ax.set_xlabel('engines')
-    ax.set_ylabel('CPU usage %')
-    ax.set_ylim(0, 40)
-    ax.set_title('average CPU usage on Raspberry Pi 3')
-    ax.set_xticks(index)
+    ax.set_ylim(0, max(cpu_usages) + 10)
+    ax.set_title('CPU usage on Raspberry Pi 3')
+    ax.set_xticks(indices)
     ax.set_xticklabels(engines)
+    plt.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 
     fig.tight_layout()
     plt.show()
