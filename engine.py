@@ -107,14 +107,14 @@ class PorcupineEngine(Engine):
     def __init__(self, keyword, sensitivity):
         self._porcupine = Porcupine(
             library_path=os.path.join(self._repo_path, 'lib/linux/x86_64/libpv_porcupine.so'),
-            model_file_path=os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
-            keyword_file_path=os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower()),
-            sensitivity=sensitivity)
+            model_path=os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
+            keyword_paths=[os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower())],
+            sensitivities=[sensitivity])
 
     def process(self, pcm):
         assert pcm.dtype == np.int16
 
-        return self._porcupine.process(pcm)
+        return self._porcupine.process(pcm) == 0
 
     def release(self):
         self._porcupine.delete()

@@ -1,4 +1,4 @@
 matplotlib
 numpy
-pocketsphinx==0.1.3
+pocketsphinx
 soundfile
