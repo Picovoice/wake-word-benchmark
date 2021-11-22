@@ -61,11 +61,11 @@ class Engine(object):
             raise ValueError("no sensitivity range for '%s'", engine_type.value)
 
     @staticmethod
-    def create(engine, keyword, sensitivity):
+    def create(engine, keyword, sensitivity, **kwargs):
         if engine is Engines.POCKET_SPHINX:
             return PocketSphinxEngine(keyword, sensitivity)
         elif engine is Engines.PORCUPINE:
-            return PorcupineEngine(keyword, sensitivity)
+            return PorcupineEngine(keyword, sensitivity, **kwargs)
         elif engine is Engines.SNOWBOY:
             return SnowboyEngine(keyword, sensitivity)
         else:
@@ -104,8 +104,9 @@ class PocketSphinxEngine(Engine):
 
 
 class PorcupineEngine(Engine):
-    def __init__(self, keyword, sensitivity):
+    def __init__(self, keyword, sensitivity, access_key):
         self._porcupine = Porcupine(
+            access_key=access_key,
             library_path=os.path.join(self._repo_path, 'lib/linux/x86_64/libpv_porcupine.so'),
             model_path=os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
             keyword_paths=[os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower())],
