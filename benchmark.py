@@ -26,7 +26,7 @@ logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=loggin
 
 
 def run_sensitivity(pcm, num_frames, labels, num_keywords, engine_type, sensitivity):
-    detector = Engine.create(engine_type, keyword=args.keyword, sensitivity=sensitivity)
+    detector = Engine.create(engine_type, keyword=args.keyword, sensitivity=sensitivity, access_key=args.access_key)
 
     frame_length = Engine.frame_length()
 
@@ -64,7 +64,7 @@ def run(engine_type, min_false_alarm=0.1, max_false_alarm=0.1):
     frame_length = Engine.frame_length()
     num_frames = pcm.size // frame_length
 
-    labels = np.zeros((num_frames,), dtype=np.bool)
+    labels = np.zeros((num_frames,), dtype=bool)
     for start_sec, end_sec in keyword_times_sec:
         start_frame = int(start_sec * Dataset.sample_rate() // frame_length)
         end_frame = int((end_sec * Dataset.sample_rate() + (frame_length - 1)) // frame_length)
@@ -102,6 +102,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--librispeech_dataset_path', required=True)
 parser.add_argument('--demand_dataset_path', required=True)
 parser.add_argument('--keyword', required=True)
+parser.add_argument('--access-key', required=True)
 
 if __name__ == '__main__':
     args = parser.parse_args()
