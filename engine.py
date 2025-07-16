@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Picovoice Inc.
+# Copyright 2018-2025 Picovoice Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ from collections import namedtuple
 from enum import Enum
 
 import numpy as np
-from pocketsphinx import get_model_path
-from pocketsphinx.pocketsphinx import Decoder
+from pocketsphinx import (
+    get_model_path,
+    Decoder,
+)
 
 from engines import Porcupine
 from engines import snowboydetect
@@ -69,7 +71,7 @@ class Engine(object):
         elif engine is Engines.SNOWBOY:
             return SnowboyEngine(keyword, sensitivity)
         else:
-            ValueError("cannot create engine of type '%s'", engine.value)
+            raise ValueError("cannot create engine of type '%s'", engine.value)
 
 
 class PocketSphinxEngine(Engine):

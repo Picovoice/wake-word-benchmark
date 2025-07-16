@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Picovoice Inc.
+# Copyright 2018-2025 Picovoice Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,9 +17,19 @@
 import argparse
 import logging
 import multiprocessing
+import os
+import numpy as np
+import soundfile
+from dataset import (
+    Dataset,
+    Datasets
+)
 
-from dataset import *
-from engine import *
+from engine import (
+    Engine,
+    Engines
+)
+
 from mixer import create_test_files
 
 logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s', level=logging.INFO)

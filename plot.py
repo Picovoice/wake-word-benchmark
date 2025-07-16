@@ -66,7 +66,7 @@ def plot_accuracy_chart(target_false_alarm_per_hour=0.1):
 
     for i in indices:
         ax.text(
-            i - 0.075,
+            float(i) - 0.075,
             miss_rates[i] + 2,
             '%.1f%%' % miss_rates[i],
             color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
@@ -107,7 +107,7 @@ def plot_cpu_chart():
 
     for i in indices:
         ax.text(
-            i - 0.075,
+            float(i) - 0.075,
             cpu_usages[i] + 1,
             '%.1f%%' % cpu_usages[i],
             color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
