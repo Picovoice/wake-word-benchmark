@@ -1,5 +1,5 @@
 matplotlib
 numpy
-pocketsphinx
-pvporcupine
+pocketsphinx==5.0.4
+pvporcupine==3.0.5
 soundfile
