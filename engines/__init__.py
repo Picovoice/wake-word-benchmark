@@ -17,13 +17,10 @@
 import os
 import sys
 
-# Add Porcupine's binding file to the system path.
-sys.path.append(os.path.join(os.path.dirname(__file__), 'porcupine/binding/python'))
 # Add Snowboy's binding file to the system path.
 if sys.version_info[0] < 3:
     sys.path.append(os.path.join(os.path.dirname(__file__), 'snowboy/swig/Python'))
 else:
     sys.path.append(os.path.join(os.path.dirname(__file__), 'snowboy/swig/Python3'))
 
-from porcupine import Porcupine
 import snowboydetect

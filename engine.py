@@ -20,9 +20,9 @@ from enum import Enum
 
 import numpy as np
 from pocketsphinx import get_model_path
-from pocketsphinx.pocketsphinx import Decoder
+from pocketsphinx import Decoder, Config
 
-from engines import Porcupine
+import pvporcupine
 from engines import snowboydetect
 
 
@@ -74,10 +74,11 @@ class Engine(object):
 
 class PocketSphinxEngine(Engine):
     def __init__(self, keyword, sensitivity):
-        config = Decoder.default_config()
+        config = Config()
         config.set_string('-logfn', '/dev/null')
-        config.set_string('-hmm', os.path.join(get_model_path(), 'en-us'))
-        config.set_string('-dict', os.path.join(get_model_path(), 'cmudict-en-us.dict'))
+        config.set_string('-hmm', os.path.join(get_model_path('en-us'), 'en-us'))
+        config.set_string('-dict', os.path.join(get_model_path('en-us'), 'cmudict-en-us.dict'))
+        config.set_string('-lm', None)
         config.set_string('-keyphrase', keyword if keyword != 'snowboy' else 'snow boy')
         config.set_float('-kws_threshold', 10 ** -sensitivity)
 
@@ -105,11 +106,9 @@ class PocketSphinxEngine(Engine):
 
 class PorcupineEngine(Engine):
     def __init__(self, keyword, sensitivity, access_key):
-        self._porcupine = Porcupine(
+        self._porcupine = pvporcupine.create(
             access_key=access_key,
-            library_path=os.path.join(self._repo_path, 'lib/linux/x86_64/libpv_porcupine.so'),
-            model_path=os.path.join(self._repo_path, 'lib/common/porcupine_params.pv'),
-            keyword_paths=[os.path.join(self._repo_path, 'resources/keyword_files/linux/%s_linux.ppn' % keyword.lower())],
+            keywords=[keyword.lower()],
             sensitivities=[sensitivity])
 
     def process(self, pcm):
@@ -122,10 +121,6 @@ class PorcupineEngine(Engine):
 
     def __str__(self):
         return 'Porcupine'
-
-    @property
-    def _repo_path(self):
-        return os.path.join(os.path.dirname(__file__), 'engines/porcupine')
 
 
 class SnowboyEngine(Engine):
