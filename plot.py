@@ -91,7 +91,7 @@ def plot_cpu_chart():
     engine_cpu_usage = [
         (Engines.POCKET_SPHINX.value, 12.13),
         (Engines.SNOWBOY.value, 3.84),
-        (Engines.PORCUPINE.value, 1.02)
+        (Engines.PORCUPINE.value, 0.60)
     ]
 
     engines = [x[0] for x in engine_cpu_usage]
@@ -113,7 +113,7 @@ def plot_cpu_chart():
             color=PV_COLOR if engines[i] == Engines.PORCUPINE.value else COLOR)
 
     ax.set_ylim(0, max(cpu_usages) + 10)
-    ax.set_title('CPU usage on Raspberry Pi 5')
+    ax.set_title('CPU usage on Raspberry Pi 5 32-bit')
     ax.set_xticks(indices)
     ax.set_xticklabels(engines)
     plt.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)

@@ -19,10 +19,13 @@ from collections import namedtuple
 from enum import Enum
 
 import numpy as np
-from pocketsphinx import get_model_path
-from pocketsphinx import Decoder, Config
-
 import pvporcupine
+from pocketsphinx import (
+    Config,
+    Decoder,
+    get_model_path
+)
+
 from engines import snowboydetect
 
 

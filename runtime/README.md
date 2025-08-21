@@ -6,15 +6,15 @@ moving data between C and different language bindings, etc when possible.
 
 For Snowboy a utility program is created [here](/runtime/snowboy_runtime_test.cpp). 
 
-For Porcupine we use the utility script [here](/runtime/porcupine_runtime_test.py). It reads a WAV file and pass it 
-through the corresponding wake-word engine frame-by-frame as is the case in real time applications. 
-It only measures the time spent in the corresponding processing/detection method of the engines.
+For Porcupine we use the file-based C demo application available within the official repository. These programs read a
+WAV file and pass it through the corresponding wake-word engine frame-by-frame as is the case in real time applications.
+They only measure the time spent in the corresponding processing/detection method of the engines.
 
 For PocketSphinx the task of creating such a utility program is more involved and hence we opt for an easier method of
 measuring the processing time of its commandline interface. This is essentially an upper bound on the actual processing
 time of PocketSphinx.
 
-All the measurements are done on Raspberry Pi 5 64bit.
+All the measurements are done on Raspberry Pi 5 32bit.
 
 ## Real Time Factor
 
@@ -45,9 +45,8 @@ engines/snowboy/resources/common.res engines/snowboy/resources/alexa/alexa-avs-s
 ```
 
 ### Porcupine
-```bash
-python3 runtime/porcupine_runtime_test.py --audio audio/multiple_keywords.wav --keyword alexa --access-key ${ACCESS_KEY}
-```
+Refer to the documentation of the [C demo](https://github.com/Picovoice/porcupine/tree/master/demo/c) application
+within the official repository.
 
 ### PocketSphinx
 
