@@ -2,11 +2,11 @@
 
 Below the methodology for measuring the real-time factor of different wake-word engines is explained. The goal is to
 measure only the CPU consumed by the engine and not remaining tasks such as audio reading (from file or microphone),
-moving data between C and different language bindings, etc when possible.
+moving data between C and different language bindings, etc. when possible.
 
-For Snowboy a utility program is created [here](/runtime/snowboy_runtime_test.cpp). 
+For Snowboy a utility program is created [here](../runtime/snowboy_runtime_test.cpp).
 
-For Porcupine we use the file-based C demo application available within the official repository. These programs read a
+For Porcupine, we use the file-based C demo application available within the official repository. These programs read a
 WAV file and pass it through the corresponding wake-word engine frame-by-frame as is the case in real time applications.
 They only measure the time spent in the corresponding processing/detection method of the engines.
 

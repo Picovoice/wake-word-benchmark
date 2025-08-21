@@ -4,14 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ master ]
-    paths:
-      - 'binding/python/*.py'
-      - 'demo/python/*.py'
   pull_request:
     branches: [ master, 'v[0-9]+.[0-9]+' ]
-    paths:
-      - 'binding/python/*.py'
-      - 'demo/python/*.py'
 
 jobs:
   check-python-codestyle:
@@ -29,4 +23,4 @@ jobs:
       run: pip install flake8 pep8-naming
 
     - name: Check python codestyle
-      run: flake8 --ignore=F401,F403,F405 --max-line-length=120 binding/python demo/python
+      run: flake8 --max-line-length=120 --exclude=engines .
