@@ -50,9 +50,10 @@ from [Kaggle](https://www.kaggle.com/aanhari/demand-dataset).
 
 ## Engines
 
-Three wake-word engines are used. [PocketSphinx](https://github.com/cmusphinx/pocketsphinx) which can
-be installed using [PyPI](https://pypi.org/project/pocketsphinx/). [Porcupine](https://github.com/Picovoice/Porcupine)
-and [Snowboy](https://github.com/Kitt-AI/snowboy) which are included as submodules in this repository. The Snowboy
+Three wake-word engines are used. [PocketSphinx](https://github.com/cmusphinx/pocketsphinx) and
+[Porcupine](https://github.com/Picovoice/Porcupine) are available on PyPI:
+[PocketSphinx](https://pypi.org/project/pocketsphinx/) and [Porcupine](https://pypi.org/project/pvporcupine/).
+[Snowboy](https://github.com/Kitt-AI/snowboy) which is included as submodules in this repository. The Snowboy
 engine has an audio frontend component which is not normally a part of wake word engines and is considered a
 separate part of audio processing chain. The other two engines have not such component in them. We enabled this
 component in Snowboy engine for this benchmark as this is the optimal way of running it.
