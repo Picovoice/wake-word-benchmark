@@ -69,7 +69,7 @@ git clone --recurse-submodules git@github.com:Picovoice/wakeword-benchmark.git
 ```
 
 Make sure the Python packages in the [requirements.txt](requirements.txt) are properly installed for your Python
-version as Python bindings are used for running the engines. The repository for Snowboy are cloned in
+version as Python bindings are used for running the engines. The repository for Snowboy is cloned in
 [engines](engines). Follow the instructions on their repository to be able to run their Python demo before proceeding
 to the next step.
 
