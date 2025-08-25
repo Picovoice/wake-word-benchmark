@@ -17,7 +17,6 @@ libf
 liblapack
 libri
 librispeech
-librispeech
 libsnowboy
 logfn
 matplotlib
