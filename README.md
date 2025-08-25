@@ -44,18 +44,19 @@ from more than 50 distinct speakers are used. The recordings are crowd-sourced. 
 repository [here](audio).
 
 In order to simulate real-world situations, the data is mixed with noise (at 10 dB SNR). For this purpose, we use
-[DEMAND](https://asa.scitation.org/doi/abs/10.1121/1.4799597) dataset which has noise recording in 18 different
-environments (e.g. kitchen, office, traffic, etc.). It can be downloaded from
-[Kaggle](https://www.kaggle.com/aanhari/demand-dataset).
+[DEMAND](https://doi.org/10.1121/1.4799597) dataset which has noise recording in 18 different environments
+(e.g. kitchen, office, traffic, etc.). It can be downloaded
+from [Kaggle](https://www.kaggle.com/aanhari/demand-dataset).
 
 ## Engines
 
-Three wake-word engines are used. [PocketSphinx](https://github.com/cmusphinx/pocketsphinx) which can
-be installed using [PyPI](https://pypi.org/project/pocketsphinx/). [Porcupine](https://github.com/Picovoice/Porcupine)
-and [Snowboy](https://github.com/Kitt-AI/snowboy) which are included as submodules in this repository. The Snowboy engine
-has a audio frontend component which is not normally a part of wake word engines and is considered a  separate part of
-audio processing chain. The other two engines have not such component in them. We enabled this component in Snowboy engine
-for this benchmark as this is the optimal way of running it.
+Three wake-word engines are used. [PocketSphinx](https://github.com/cmusphinx/pocketsphinx) and
+[Porcupine](https://github.com/Picovoice/Porcupine) are available on PyPI:
+[PocketSphinx](https://pypi.org/project/pocketsphinx/) and [Porcupine](https://pypi.org/project/pvporcupine/).
+[Snowboy](https://github.com/Kitt-AI/snowboy) which is included as submodules in this repository. The Snowboy
+engine has an audio frontend component which is not normally a part of wake word engines and is considered a
+separate part of audio processing chain. The other two engines have not such component in them. We enabled this
+component in Snowboy engine for this benchmark as this is the optimal way of running it.
 
 ## How to Reproduce?
 
@@ -67,9 +68,9 @@ The benchmark has been developed on Ubuntu 20.04 with Python 3.8. Clone the repo
 git clone --recurse-submodules git@github.com:Picovoice/wakeword-benchmark.git
 ```
 
-Make sure the Python packages in the [requirements.txt](/requirements.txt) are properly installed for your Python
-version as Python bindings are used for running the engines. The repositories for Porcupine and Snowboy are cloned in
-[engines](/engines). Follow the instructions on their repositories to be able to run their Python demo before proceeding
+Make sure the Python packages in the [requirements.txt](requirements.txt) are properly installed for your Python
+version as Python bindings are used for running the engines. The repository for Snowboy is cloned in
+[engines](engines). Follow the instructions on their repository to be able to run their Python demo before proceeding
 to the next step.
 
 ### Running the Accuracy Benchmark
@@ -92,4 +93,4 @@ python3 benchmark.py \
 
 ### Running the Runtime Benchmark
 
-Refer to runtime [documentation](/runtime/README.md).
+Refer to runtime [documentation](runtime/README.md).

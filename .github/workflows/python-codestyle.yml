@@ -1,0 +1,26 @@
+name: Python Codestyle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, 'v[0-9]+.[0-9]+' ]
+
+jobs:
+  check-python-codestyle:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: pip install flake8 pep8-naming
+
+    - name: Check python codestyle
+      run: flake8 --max-line-length=120 --exclude=engines .
