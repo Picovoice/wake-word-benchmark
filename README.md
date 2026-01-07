@@ -29,7 +29,7 @@ rate of different engines at 1 false alarm per 10 hours. The lower the miss rate
 
 ### Runtime
 
-Below is the runtime measurements on a Raspberry Pi 3. For Snowboy the runtime highly-depends on the keyword. Therefore,
+Below is the runtime measurements on a Raspberry Pi 5 32-bit. For Snowboy the runtime highly-depends on the keyword. Therefore,
 we measured the CPU usage for each keyword and used the average.
 
 ![](doc/img/cpu.png)
